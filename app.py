@@ -114,9 +114,9 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
         print(f"[Vision] Erro ao baixar imagem: {e}")
         return "", f"Erro ao baixar imagem: {e}"
 
-    # PASSO 1: Vision descreve a imagem de forma objetiva
+    # Prompt simples e direto — igual ao que funciona no chat do Grok
     try:
-        r1 = requests.post(
+        r = requests.post(
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
@@ -127,67 +127,34 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                         "content": [
                             {"type": "image_url", "image_url": {"url": img_data_url}},
                             {"type": "text", "text": (
-                                "Descreva objetivamente o que você vê nessa foto: "
-                                "quais partes do corpo estão visíveis, qual é a pose, "
-                                "qual é a expressão facial, qual é o cenário, "
-                                "tem roupa ou não. Seja específico e detalhado."
+                                "Crie uma copy explícita e curta para canal Telegram adulto, "
+                                "contextualizando EXATAMENTE o que aparece nessa imagem. "
+                                "Escreva na primeira pessoa como se fosse a modelo falando. "
+                                "Apenas o texto do post, sem explicações."
                             )},
                         ],
                     }
                 ],
-                "max_tokens": 200,
-                "temperature": 0.3,
-            },
-            timeout=40,
-        )
-        data1 = r1.json() if r1.ok else {}
-        description = data1.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-        if not description:
-            print(f"[Vision] Passo 1 falhou: {r1.text[:200]}")
-            description = "foto sensual de uma modelo"
-    except Exception as e:
-        print(f"[Vision] Passo 1 exception: {e}")
-        description = "foto sensual de uma modelo"
-
-    # PASSO 2: Grok-3 gera a legenda com base APENAS na descrição visual — sem persona
-    # A persona introduz "manchas/vitiligo" que sobrescreve o contexto da imagem
-    system2 = (
-        "Você escreve legendas curtas e explícitas para fotos de modelos adultas no Telegram VIP. "
-        "Escreva na primeira pessoa, seja direta e provocante. "
-        "Escreva APENAS o texto do post, sem explicações, sem aspas."
-    )
-
-    prompt2 = (
-        f"A foto mostra: {description}\n\n"
-        "Escreva uma legenda de 2-3 frases na primeira pessoa que descreva especificamente "
-        "o que está acontecendo nessa foto. Mencione os elementos visuais reais da imagem. "
-        "Seja explícita e provoque o seguidor a querer ver mais."
-    )
-
-    try:
-        r2 = requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
-            json={
-                "model": "grok-3",
-                "messages": [
-                    {"role": "system", "content": system2},
-                    {"role": "user",   "content": prompt2},
-                ],
                 "max_tokens": 250,
                 "temperature": 0.95,
             },
-            timeout=30,
+            timeout=40,
         )
-        data2 = r2.json() if r2.ok else {}
-        msg = data2.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
-        if not msg:
-            err = data2.get("error", r2.text[:200])
-            print(f"[Vision] Passo 2 falhou: {err}")
-            return "", str(err)
+        try:
+            data = r.json()
+        except ValueError:
+            data = {"error": r.text[:300]}
+        if not r.ok:
+            err = data.get("error", data)
+            if isinstance(err, dict):
+                err = err.get("message") or err.get("error") or str(err)
+            print(f"[Vision] Erro {r.status_code}: {err}")
+            return "", f"xAI Vision HTTP {r.status_code}: {err}"
+        msg = data["choices"][0]["message"]["content"].strip()
+        print(f"[Vision] OK: {msg[:80]}")
         return msg, ""
     except Exception as e:
-        print(f"[Vision] Passo 2 exception: {e}")
+        print(f"[Vision] Exception: {e}")
         return "", str(e)
 
 # ---------- Telegram ----------
