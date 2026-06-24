@@ -1,9 +1,12 @@
 import os, uuid, time, requests, base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_from_directory
 from apscheduler.schedulers.background import BackgroundScheduler
 from supabase import create_client
+
+BRT = ZoneInfo('America/Sao_Paulo')
 
 app = Flask(__name__)
 
@@ -14,7 +17,7 @@ BUCKET       = "media"
 def get_sb():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-scheduler = BackgroundScheduler()
+scheduler = BackgroundScheduler(timezone='America/Sao_Paulo')
 scheduler.start()
 
 MAX_RETRIES  = 5
@@ -253,7 +256,7 @@ def execute_schedule(campaign_id, hour, minute):
     campaign  = next((c for c in campaigns if c["id"] == campaign_id), None)
     if not campaign or not campaign.get("active"):
         return
-    today    = datetime.now().strftime("%Y-%m-%d")
+    today    = datetime.now(BRT).strftime("%Y-%m-%d")
     time_str = f"{hour:02d}:{minute:02d}"
     day_data = campaign.get("days", {}).get(today, {})
     slots    = day_data.get("slots", [])
@@ -316,7 +319,7 @@ def log_entry(campaign_id, slot_id, success, detail, attempt=1):
         if c["id"] == campaign_id:
             c.setdefault("logs", []).insert(0, {
                 "slot_id": slot_id,
-                "time":    datetime.now().isoformat(),
+                "time":    datetime.now(BRT).isoformat(),
                 "success": success,
                 "detail":  detail,
                 "attempt": attempt,
