@@ -809,6 +809,17 @@ svg.ico{display:block;flex-shrink:0}
       </div>
       <div class="gen-progress" id="genProgress"><div class="gen-bar" id="genBar" style="width:0%"></div></div>
       <div class="sched-scroll" id="schedList"></div>
+
+      <!-- CTA do dia -->
+      <div id="ctaSection" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:8px">🔗 Botão CTA do dia</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="ctaLabel" class="input-base" placeholder="Texto do botão (ex: 🔞 Entrar no grupo)" style="flex:1;min-width:150px;font-size:12px" oninput="saveCTAToDay()"/>
+          <input id="ctaUrl" class="input-base" placeholder="URL (https://t.me/...)" style="flex:1;min-width:150px;font-size:12px" oninput="saveCTAToDay()"/>
+        </div>
+        <div style="font-size:11px;color:var(--muted-fg);margin-top:6px">Aparece em todos os posts do dia (exceto enquetes). Deixe vazio para não usar.</div>
+      </div>
+
       <div class="sched-footer">
         <button class="sched-add-btn" onclick="openModal()">
           <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1176,6 +1187,9 @@ function showNew(){
   editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
   ['fName','fDesc','fToken','fChat','fPersona'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ctaLabel').value='';
+  document.getElementById('ctaUrl').value='';
+  document.getElementById('ctaSection').style.display='none';
   document.getElementById('editorTitle').textContent='Nova Campanha';
   document.getElementById('editorMeta').textContent='';
   document.getElementById('editorStatusBadge').style.display='none';
@@ -1197,7 +1211,13 @@ function showEdit(id){
   selectedDay='';schedules=[];expandedSlots=new Set();
   // Seleciona o primeiro dia se existir
   const firstDay=Object.keys(campaignDays).sort()[0];
-  if(firstDay){selectedDay=firstDay;schedules=(campaignDays[firstDay].slots||[]).map((s,i)=>({...s,_idx:i}));}
+  if(firstDay){
+    selectedDay=firstDay;
+    schedules=(campaignDays[firstDay].slots||[]).map((s,i)=>({...s,_idx:i}));
+    loadCTAFromDay(firstDay);
+  } else {
+    document.getElementById('ctaSection').style.display='none';
+  }
   document.getElementById('fName').value=c.name||'';
   document.getElementById('fDesc').value=c.desc||'';
   document.getElementById('fToken').value=c.token||'';
@@ -1515,7 +1535,11 @@ async function generateDay(){
     }
 
     // 3. Salva tudo no servidor
-    await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
+    await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{
+      slots:schedules,
+      cta_label:campaignDays[selectedDay]?.cta_label||'',
+      cta_url:campaignDays[selectedDay]?.cta_url||''
+    });
     buildDayNav();
     showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
 
@@ -1571,14 +1595,29 @@ function buildDayNav(){
   }
 }
 
+function saveCTAToDay(){
+  if(!selectedDay||!campaignDays[selectedDay]) return;
+  campaignDays[selectedDay].cta_label=document.getElementById('ctaLabel').value;
+  campaignDays[selectedDay].cta_url=document.getElementById('ctaUrl').value;
+}
+
+function loadCTAFromDay(iso){
+  const d=campaignDays[iso]||{};
+  document.getElementById('ctaLabel').value=d.cta_label||'';
+  document.getElementById('ctaUrl').value=d.cta_url||'';
+  document.getElementById('ctaSection').style.display=iso?'block':'none';
+}
+
 function selectDay(iso){
-  // Salva slots do dia atual antes de trocar
+  // Salva slots e CTA do dia atual antes de trocar
   if(selectedDay && campaignDays[selectedDay]){
     campaignDays[selectedDay].slots=[...schedules];
+    saveCTAToDay();
   }
   selectedDay=iso;
   schedules=(campaignDays[iso]?.slots||[]).map((s,i)=>({...s,_idx:i}));
   expandedSlots=new Set();
+  loadCTAFromDay(iso);
   buildDayNav();
   renderSchedules();
 }
@@ -1699,9 +1738,11 @@ async function saveCamp(){
   if(!name){showToast('Informe o nome','error');return;}
   if(!token){showToast('Informe o Bot Token','error');return;}
   if(!chat){showToast('Informe o Chat ID','error');return;}
-  // Salva slots do dia atual em memória antes de enviar
+  // Salva slots e CTA do dia atual em memória antes de enviar
   if(selectedDay && campaignDays[selectedDay]){
     campaignDays[selectedDay].slots=schedules.map(s=>{const c={...s};delete c._idx;return c;});
+    campaignDays[selectedDay].cta_label=document.getElementById('ctaLabel').value;
+    campaignDays[selectedDay].cta_url=document.getElementById('ctaUrl').value;
   }
   const body={
     name,token,chat,
