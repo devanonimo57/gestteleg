@@ -5,7 +5,876 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Gestor Telegram</title>
 <style>
+*{box-sizing:border-box;margin:0;padding:0}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Gestor Telegram</title>
+<style>
 *{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e10;--bg2:#1a1a1f;--bg3:#23232b;--bg4:#2c2c36;
+  --border:#2e2e38;--border2:#3a3a48;
+  --text:#e8e8f0;--text2:#9898b0;--text3:#5a5a72;
+  --accent:#6c5ce7;--accent2:#7c6df0;--accent-bg:rgba(108,92,231,.15);
+  --green:#00c98d;--red:#ff5c5c;--amber:#f0a500;--blue:#4fa3e0;--pink:#e0608a;
+  --radius:8px;--rsm:5px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+nav{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;height:48px;gap:8px}
+.nav-logo{font-size:15px;font-weight:600;margin-right:16px;display:flex;align-items:center;gap:8px}
+.nav-links{display:flex;gap:2px;flex:1}
+.nav-link{padding:6px 14px;border-radius:var(--rsm);cursor:pointer;color:var(--text2);font-size:13px;border:none;background:none;transition:all .15s}
+.nav-link:hover{background:var(--bg3);color:var(--text)}
+.nav-link.active{background:var(--bg4);color:var(--text)}
+main{padding:28px 32px;max-width:1200px;margin:0 auto}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-header-left{display:flex;align-items:center;gap:12px}
+.back-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:5px 10px;border-radius:var(--rsm);transition:all .15s}
+.back-btn:hover{background:var(--bg3);color:var(--text)}
+.page-title{font-size:20px;font-weight:600}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:var(--rsm);padding:8px 20px;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--rsm);padding:8px 16px;font-size:13px;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{background:var(--bg4)}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border);border-radius:var(--rsm);padding:7px 14px;font-size:12px;cursor:pointer;transition:all .15s}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-ghost:disabled{opacity:.5;cursor:not-allowed}
+.btn-green{background:rgba(0,201,141,.12);color:var(--green);border:1px solid rgba(0,201,141,.3);border-radius:var(--rsm);padding:7px 14px;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s}
+.btn-green:hover{background:rgba(0,201,141,.22)}
+.btn-green:disabled{opacity:.5;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:block}
+.form-input,.form-textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);font-size:13px;padding:8px 10px;outline:none;transition:border .15s;font-family:inherit}
+.form-input:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--text3)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-input.valid{border-color:var(--green)}
+.form-input.invalid{border-color:var(--red)}
+.token-row{display:flex;gap:8px}
+.token-row .form-input{flex:1}
+.token-status{font-size:11px;margin-top:4px;display:none}
+.token-status.ok{color:var(--green);display:block}
+.token-status.err{color:var(--red);display:block}
+.status-toggle{width:100%;background:var(--accent);border:none;border-radius:var(--rsm);color:#fff;font-size:13px;font-weight:500;padding:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s}
+.status-toggle.inactive{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#fff}
+.status-toggle.inactive .status-dot{background:var(--text3)}
+
+/* SCHEDULE */
+.sched-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sched-tags{display:flex;gap:6px;flex-wrap:wrap;min-height:24px}
+.stag{font-size:11px;padding:3px 9px;border-radius:99px;display:flex;align-items:center;gap:4px;font-weight:500}
+.stag.img{background:rgba(79,163,224,.18);color:var(--blue)}
+.stag.react{background:rgba(224,96,138,.18);color:var(--pink)}
+.stag.poll{background:rgba(240,165,0,.18);color:var(--amber)}
+.sched-list{display:flex;flex-direction:column;gap:5px;max-height:480px;overflow-y:auto;padding-right:2px}
+.sched-row{display:grid;grid-template-columns:48px 1fr auto auto auto;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);padding:6px 10px}
+.sched-time{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.sched-sel{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--rsm);color:var(--text);font-size:12px;padding:4px 7px;outline:none;cursor:pointer;width:100%}
+.sched-copy{background:none;border:none;cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px;color:var(--text3);transition:all .15s;white-space:nowrap}
+.sched-copy:hover{color:var(--accent);background:var(--accent-bg)}
+.sched-copy:disabled{opacity:.4;cursor:not-allowed}
+.sched-send{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px;transition:all .15s}
+.sched-send:hover{color:var(--green);background:rgba(0,201,141,.1)}
+.sched-send:disabled{opacity:.4;cursor:not-allowed}
+.sched-remove{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;padding:2px 5px;border-radius:4px;transition:all .15s}
+.sched-remove:hover{color:var(--red);background:rgba(255,92,92,.1)}
+.sched-msg{font-size:10px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+
+.add-row{display:flex;gap:8px;margin-top:8px}
+.add-btn{flex:1;background:none;border:1px dashed var(--border2);border-radius:var(--rsm);color:var(--text2);font-size:13px;padding:8px;cursor:pointer;transition:all .15s}
+.add-btn:hover{background:var(--bg3);border-color:var(--accent);color:var(--accent)}
+.gen-day-btn{background:var(--accent-bg);border:1px solid var(--accent);border-radius:var(--rsm);color:var(--accent);font-size:12px;padding:8px 14px;cursor:pointer;font-weight:500;transition:all .15s;white-space:nowrap}
+.gen-day-btn:hover{background:var(--accent);color:#fff}
+.gen-day-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* CAMPS */
+.camps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.camps-title{font-size:20px;font-weight:600}
+.camp-cards{display:flex;flex-direction:column;gap:10px}
+.camp-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:border-color .15s}
+.camp-card:hover{border-color:var(--border2)}
+.camp-info{flex:1}
+.camp-name{font-weight:500;font-size:14px}
+.camp-meta{font-size:12px;color:var(--text2);margin-top:3px}
+.pill{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:500;white-space:nowrap}
+.pill.active{background:rgba(0,201,141,.15);color:var(--green)}
+.pill.inactive{background:var(--bg3);color:var(--text2)}
+.camp-actions{display:flex;gap:6px}
+.icon-btn{background:none;border:1px solid var(--border);border-radius:var(--rsm);color:var(--text2);padding:5px 9px;cursor:pointer;font-size:13px;transition:all .15s}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.icon-btn.danger:hover{color:var(--red);border-color:var(--red);background:rgba(255,92,92,.08)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.copy-row{display:flex;gap:8px;align-items:flex-start}
+.copy-row .form-textarea{flex:1}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);display:none;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.4);max-width:320px}
+#toast.show{display:block;animation:fs .2s ease}
+#toast.success{border-color:var(--green);color:var(--green)}
+#toast.error{border-color:var(--red);color:var(--red)}
+#toast.info{border-color:var(--accent);color:var(--accent)}
+@keyframes fs{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* UPLOAD */
+.upload-area{border:1px dashed var(--border2);border-radius:var(--rsm);padding:14px;text-align:center;color:var(--text2);font-size:12px;cursor:pointer;transition:all .15s;position:relative}
+.upload-area:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.previews{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.preview-img{width:54px;height:54px;border-radius:5px;object-fit:cover;border:1px solid var(--border)}
+.preview-badge{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px;color:var(--text2)}
+.time-inp{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);font-size:22px;font-weight:600;padding:10px 14px;outline:none;width:100%;text-align:center}
+.time-inp:focus{border-color:var(--accent)}
+
+/* LOGS */
+.log-item{font-size:12px;padding:8px 10px;border-radius:var(--rsm);background:var(--bg3);border:1px solid var(--border);margin-bottom:6px}
+.log-item .lt{color:var(--text3);font-size:11px;margin-top:2px}
+.log-item.ok .ls{color:var(--green)}
+.log-item.fail .ls{color:var(--red)}
+
+/* PROGRESS */
+.progress-bar{height:3px;background:var(--accent);border-radius:2px;transition:width .3s}
+.progress-wrap{background:var(--bg3);border-radius:2px;margin-bottom:12px;display:none}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
+.empty h3{font-size:16px;font-weight:500;color:var(--text);margin-bottom:6px}
+
+/* GALLERY */
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.gallery-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);overflow:hidden;cursor:pointer;transition:border-color .15s;position:relative}
+.gallery-item:hover{border-color:var(--accent)}
+.gallery-item img,.gallery-item video{width:100%;height:100px;object-fit:cover;display:block;background:var(--bg3)}
+.gallery-item-info{padding:5px 8px 7px}
+.gallery-item-name{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-item-size{font-size:10px;color:var(--text3);margin-top:2px}
+.gallery-item-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);border:none;color:#fff;border-radius:3px;font-size:11px;padding:2px 6px;cursor:pointer;opacity:0;transition:opacity .15s}
+.gallery-item:hover .gallery-item-del{opacity:1}
+.gallery-item.selectable:hover{border-color:var(--green)}
+.storage-wrap{background:var(--bg3);border-radius:4px;height:6px;margin-top:6px}
+.storage-fill{height:6px;border-radius:4px;background:var(--accent);transition:width .4s}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">✈️ Gestor Telegram</div>
+  <div class="nav-links">
+    <button class="nav-link active" id="nav-camps" onclick="showList()">Campanhas</button>
+    <button class="nav-link" id="nav-gallery" onclick="showGallery()">Galeria</button>
+  </div>
+</nav>
+<main>
+  <!-- LIST -->
+  <div id="listView">
+    <div class="camps-header">
+      <span class="camps-title">Campanhas</span>
+      <button class="btn-primary" onclick="showNew()">+ Nova campanha</button>
+    </div>
+    <div id="campCards" class="camp-cards"></div>
+  </div>
+
+  <!-- EDITOR -->
+  <div id="editorView" style="display:none">
+    <div class="page-header">
+      <div class="page-header-left">
+        <button class="back-btn" onclick="showList()">← Campanhas</button>
+        <span class="page-title" id="editorTitle">Nova Campanha</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" id="testBtn" onclick="testConn()" style="display:none">🔌 Testar</button>
+        <button class="btn-primary" onclick="saveCamp()">Salvar</button>
+      </div>
+    </div>
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="card">
+        <div class="card-title">Informações</div>
+        <div class="form-group"><label class="form-label">Nome</label><input id="fName" class="form-input" placeholder="Nome da campanha"/></div>
+        <div class="form-group"><label class="form-label">Descrição</label><textarea id="fDesc" class="form-textarea" placeholder="Descrição opcional"></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <button id="statusBtn" class="status-toggle" onclick="toggleStatus()"><span class="status-dot"></span><span id="statusTxt">Ativo</span></button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bot Token</label>
+          <div class="token-row">
+            <input id="fToken" class="form-input" placeholder="123456789:ABC..." type="password" oninput="clearTokenStatus()"/>
+            <button class="btn-ghost" onclick="validateToken()">Validar</button>
+          </div>
+          <div id="tokenStatus" class="token-status"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Chat ID</label><input id="fChat" class="form-input" placeholder="-100..."/></div>
+        <div class="form-group">
+          <label class="form-label">Persona do canal</label>
+          <textarea id="fPersona" class="form-textarea" placeholder="Ex: Canal de moda feminina, tom descontraído, foco em tendências..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Chave API Grok/xAI <span style="color:var(--text3);font-size:11px">(para gerar copys com IA)</span></label>
+          <div class="token-row">
+            <input id="fXai" class="form-input" placeholder="xai-..." type="password"/>
+            <button class="btn-ghost" onclick="validateXai()">Validar</button>
+          </div>
+          <div id="xaiStatus" class="token-status"></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Crie a chave em <a href="https://console.x.ai" target="_blank" style="color:var(--accent)">console.x.ai</a></div>
+        </div>
+
+        <!-- LOGS -->
+        <div id="logsSection" style="margin-top:8px;display:none">
+          <div class="card-title" style="margin-bottom:10px">Logs recentes</div>
+          <div id="logsList"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="card">
+        <div class="sched-header">
+          <div class="card-title" style="margin-bottom:0">Horários</div>
+          <div class="sched-tags" id="schedTags"></div>
+        </div>
+        <div class="progress-wrap" id="genProgress">
+          <div class="progress-bar" id="genBar" style="width:0%"></div>
+        </div>
+        <div class="sched-list" id="schedList"></div>
+        <div class="add-row">
+          <button class="add-btn" onclick="openModal()">+ Adicionar horário</button>
+          <button class="gen-day-btn" id="genDayBtn" onclick="generateDay()">✨ Gerar dia completo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY -->
+  <div id="galleryView" style="display:none">
+    <div class="page-header" style="margin-bottom:16px">
+      <span class="page-title">Galeria de Mídia</span>
+      <label class="btn-primary" style="cursor:pointer">
+        + Upload
+        <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToGallery(event)"/>
+      </label>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
+        <span>Armazenamento usado</span>
+        <span id="storageText">— / 1 GB</span>
+      </div>
+      <div class="storage-wrap"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
+    </div>
+    <div id="galleryGrid" class="gallery-grid"></div>
+  </div>
+</main>
+
+<!-- GALLERY PICKER -->
+<div class="modal-overlay" id="galleryPicker">
+  <div class="modal" style="max-width:680px;width:95vw">
+    <div class="modal-title">Escolher da galeria</div>
+    <div id="pickerGrid" class="gallery-grid" style="max-height:52vh;overflow-y:auto;padding-right:2px"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeGalleryPicker()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Adicionar horário</div>
+    <div class="form-group"><label class="form-label">Horário</label><input type="time" id="mTime" class="time-inp" value="08:00"/></div>
+    <div class="form-group">
+      <label class="form-label">Tipo de post</label>
+      <select id="mType" class="form-input" onchange="onTypeChange()">
+        <option value="image">🖼️ Imagem</option>
+        <option value="video">🎬 Vídeo</option>
+        <option value="text">✍️ Texto</option>
+        <option value="reaction">💬 Reação / Mensagem</option>
+        <option value="poll">📊 Enquete</option>
+      </select>
+    </div>
+    <div id="mediaGroup" class="form-group">
+      <label class="form-label">Mídia</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div class="upload-area" style="flex:1">
+          <input type="file" id="mFile" accept="image/*,video/*" onchange="handleUpload(event)"/>
+          <div>📁 Upload novo arquivo</div>
+          <div style="font-size:11px;margin-top:3px;color:var(--text3)">JPG, PNG, GIF, MP4</div>
+        </div>
+        <button class="btn-ghost" onclick="openGalleryPicker()" type="button" style="white-space:nowrap;align-self:stretch">🖼️ Galeria</button>
+      </div>
+      <div class="previews" id="mPreviews"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="msgLabel">Mensagem / legenda</label>
+      <div class="copy-row">
+        <textarea id="mMsg" class="form-textarea" placeholder="Texto da mensagem..."></textarea>
+        <button class="btn-green" onclick="generateCopyModal()" id="genCopyBtn" title="Gerar copy com IA">✨ IA</button>
+      </div>
+      <div id="pollHint" style="font-size:11px;color:var(--text3);margin-top:4px;display:none">Primeira linha = pergunta · próximas linhas = opções (mín. 2)</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="addSchedule()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const TYPE = {
+  image:    {icon:'🖼️',label:'Imagem',  cls:'img'},
+  video:    {icon:'🎬',label:'Vídeo',   cls:'img'},
+  reaction: {icon:'💬',label:'Reação',  cls:'react'},
+  poll:     {icon:'📊',label:'Enquete', cls:'poll'},
+  text:     {icon:'✍️',label:'Texto',   cls:'react'},
+};
+
+let campaigns=[], editingId=null, isActive=true, schedules=[];
+let pendingPath=null, pendingName=null;
+let sending=false;
+let logRefreshTimer=null;
+
+const DEFAULT_DAY_TYPES = [
+  'image','reaction','image','poll',
+  'image','image','reaction','image',
+  'image','poll','image','reaction',
+  'image','image','reaction','image',
+  'image','poll','image','image',
+  'reaction','image','image','reaction',
+];
+
+function defaultDaySchedules(){
+  return DEFAULT_DAY_TYPES.map((type,hour)=>({
+    id: crypto.randomUUID(),
+    time: String(hour).padStart(2,'0') + ':00',
+    type,
+    msg: '',
+    media_path: '',
+    media_name: '',
+    _idx: hour,
+  }));
+}
+
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch('/api'+path,opts);
+  return r.json();
+}
+
+async function loadCamps(){ campaigns=await api('GET','/campaigns'); }
+
+// ---------- GALLERY ----------
+let galleryFiles = [];
+
+function setNav(id){
+  document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('nav-'+id); if(el) el.classList.add('active');
+}
+
+async function showGallery(){
+  setNav('gallery');
+  stopLogRefresh();
+  document.getElementById('listView').style.display='none';
+  document.getElementById('editorView').style.display='none';
+  document.getElementById('galleryView').style.display='block';
+  await loadMedia();
+}
+
+async function loadMedia(){
+  const r=await fetch('/api/media');
+  const data=await r.json();
+  galleryFiles=data.files||[];
+  renderGallery(data.total_bytes||0, data.limit_bytes||1073741824);
+}
+
+function fmtBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+function renderGallery(total, limit){
+  const pct=Math.min(100,(total/limit)*100);
+  document.getElementById('storageText').textContent=fmtBytes(total)+' / '+fmtBytes(limit);
+  const fill=document.getElementById('storageFill');
+  fill.style.width=pct.toFixed(1)+'%';
+  fill.style.background=pct>80?'var(--red)':'var(--accent)';
+  const grid=document.getElementById('galleryGrid');
+  if(!galleryFiles.length){
+    grid.innerHTML='<div class="empty"><div class="empty-icon">🖼️</div><h3>Galeria vazia</h3><p>Faça upload de imagens e vídeos para usar nos seus posts.</p></div>';
+    return;
+  }
+  grid.innerHTML=galleryFiles.map(f=>itemHTML(f,false)).join('');
+}
+
+function itemHTML(f,selectable){
+  const isVid=/\.(mp4|mov|avi|webm)$/i.test(f.name);
+  const media=isVid
+    ?`<video src="${f.url}" style="width:100%;height:100px;object-fit:cover;background:var(--bg3)"></video>`
+    :`<img src="${f.url}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">`;
+  const click=selectable
+    ?`onclick="pickMedia('${f.url.replace(/'/g,"\\'")}','${f.name.replace(/'/g,"\\'")}')"`
+    :'';
+  const del=!selectable
+    ?`<button class="gallery-item-del" onclick="deleteMedia('${f.name.replace(/'/g,"\\'")}',event)">🗑️</button>`
+    :'';
+  return `<div class="gallery-item${selectable?' selectable':''}" ${click}>
+    ${media}${del}
+    <div class="gallery-item-info">
+      <div class="gallery-item-name" title="${esc(f.name)}">${esc(f.name)}</div>
+      <div class="gallery-item-size">${fmtBytes(f.size)}</div>
+    </div>
+  </div>`;
+}
+
+async function uploadToGallery(e){
+  const files=Array.from(e.target.files); if(!files.length) return;
+  showToast(`Enviando ${files.length} arquivo(s)...`,'info');
+  for(const file of files){
+    const fd=new FormData(); fd.append('file',file);
+    await fetch('/api/upload',{method:'POST',body:fd});
+  }
+  await loadMedia();
+  showToast('Upload concluído!','success');
+  e.target.value='';
+}
+
+async function deleteMedia(name,e){
+  e.stopPropagation();
+  if(!confirm('Excluir este arquivo da galeria?')) return;
+  await fetch('/api/media/'+encodeURIComponent(name),{method:'DELETE'});
+  await loadMedia();
+  showToast('Arquivo excluído','error');
+}
+
+// ---------- GALLERY PICKER ----------
+function openGalleryPicker(){
+  const grid=document.getElementById('pickerGrid');
+  if(!galleryFiles.length){
+    fetch('/api/media').then(r=>r.json()).then(data=>{
+      galleryFiles=data.files||[];
+      renderPickerGrid(grid);
+    });
+  } else { renderPickerGrid(grid); }
+  document.getElementById('galleryPicker').classList.add('open');
+}
+
+function renderPickerGrid(grid){
+  if(!galleryFiles.length){
+    grid.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2)">Galeria vazia. Faça upload primeiro.</div>';
+    return;
+  }
+  grid.innerHTML=galleryFiles.map(f=>itemHTML(f,true)).join('');
+}
+
+function pickMedia(url,name){
+  pendingPath=url; pendingName=name;
+  const prev=document.getElementById('mPreviews'); prev.innerHTML='';
+  const isVid=/\.(mp4|mov|avi|webm)$/i.test(name);
+  if(isVid){ const b=document.createElement('div'); b.className='preview-badge'; b.textContent='🎬 '+name.slice(0,24); prev.appendChild(b); }
+  else { const img=document.createElement('img'); img.src=url; img.className='preview-img'; prev.appendChild(img); }
+  closeGalleryPicker();
+  showToast('Mídia selecionada!','success');
+}
+
+function closeGalleryPicker(){ document.getElementById('galleryPicker').classList.remove('open'); }
+
+function showList(){
+  setNav('camps');
+  stopLogRefresh();
+  loadCamps().then(()=>{
+    renderCards();
+    document.getElementById('listView').style.display='block';
+    document.getElementById('editorView').style.display='none';
+  });
+}
+
+function showNew(){
+  editingId=null; isActive=true; schedules=defaultDaySchedules();
+  pendingPath=null; pendingName=null;
+  ['fName','fDesc','fToken','fChat','fPersona','fXai'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('editorTitle').textContent='Nova Campanha';
+  document.getElementById('testBtn').style.display='none';
+  document.getElementById('tokenStatus').className='token-status';
+  document.getElementById('xaiStatus').className='token-status';
+  document.getElementById('fToken').className='form-input';
+  document.getElementById('logsSection').style.display='none';
+  applyStatus(); renderSchedules();
+  document.getElementById('listView').style.display='none';
+  document.getElementById('editorView').style.display='block';
+}
+
+function showEdit(id){
+  const c=campaigns.find(x=>x.id===id);
+  if(!c) return;
+  editingId=id; isActive=c.active;
+  schedules=JSON.parse(JSON.stringify(c.schedules||[]));
+  schedules.forEach((s,i)=>s._idx=i);
+  document.getElementById('fName').value    =c.name||'';
+  document.getElementById('fDesc').value    =c.desc||'';
+  document.getElementById('fToken').value   =c.token||'';
+  document.getElementById('fChat').value    =c.chat||'';
+  document.getElementById('fPersona').value =c.persona||'';
+  document.getElementById('fXai').value     =c.xai_key||'';
+  document.getElementById('editorTitle').textContent=c.name||'Campanha';
+  document.getElementById('testBtn').style.display='inline-block';
+  document.getElementById('fToken').className='form-input valid';
+  const ts=document.getElementById('tokenStatus');
+  ts.className='token-status ok'; ts.textContent='Token salvo';
+  document.getElementById('xaiStatus').className='token-status';
+  if(c.xai_key){
+    const gs=document.getElementById('xaiStatus');
+    gs.className='token-status ok'; gs.textContent='Chave Grok/xAI salva';
+  }
+  applyStatus(); renderSchedules(); renderLogs(c.logs||[]);
+  document.getElementById('listView').style.display='none';
+  document.getElementById('editorView').style.display='block';
+  startLogRefresh();
+}
+
+function toggleStatus(){ isActive=!isActive; applyStatus(); }
+function applyStatus(){
+  document.getElementById('statusBtn').className='status-toggle'+(isActive?'':' inactive');
+  document.getElementById('statusTxt').textContent=isActive?'Ativo':'Inativo';
+}
+
+function clearTokenStatus(){
+  document.getElementById('fToken').className='form-input';
+  document.getElementById('tokenStatus').className='token-status';
+  document.getElementById('testBtn').style.display='none';
+}
+
+async function validateToken(){
+  const token=document.getElementById('fToken').value.trim();
+  if(!token){showToast('Informe o token','error');return;}
+  showToast('Validando...','info');
+  const r=await api('POST','/validate-token',{token});
+  const inp=document.getElementById('fToken');
+  const st=document.getElementById('tokenStatus');
+  if(r.ok){
+    inp.className='form-input valid';
+    st.className='token-status ok'; st.textContent=`✅ @${r.username} — ${r.name}`;
+    document.getElementById('testBtn').style.display='inline-block';
+    showToast(`Bot @${r.username} encontrado!`,'success');
+  } else {
+    inp.className='form-input invalid';
+    st.className='token-status err'; st.textContent=`❌ ${r.error||'Token inválido'}`;
+    showToast('Token inválido','error');
+  }
+}
+
+async function validateXai(){
+  const key=document.getElementById('fXai').value.trim();
+  if(!key){showToast('Informe a chave Grok/xAI','error');return;}
+  showToast('Testando chave Grok/xAI...','info');
+  const r=await api('POST','/generate-copy',{
+    persona:'canal de teste', type:'text', xai_key:key
+  });
+  const st=document.getElementById('xaiStatus');
+  if(r.ok){
+    st.className='token-status ok'; st.textContent='✅ Chave Grok/xAI válida!';
+    showToast('Grok funcionando!','success');
+  } else {
+    st.className='token-status err'; st.textContent=`❌ ${r.error||'Chave inválida'}`;
+    showToast(r.error||'Chave Grok/xAI inválida','error');
+  }
+}
+
+async function testConn(){
+  if(!editingId){showToast('Salve primeiro','error');return;}
+  const btn=document.getElementById('testBtn');
+  btn.disabled=true; btn.textContent='⏳';
+  const r=await api('POST',`/campaigns/${editingId}/test`);
+  if(r.ok){showToast('✅ Mensagem enviada no canal!','success');}
+  else{const msg=r.error||r.detail||'Erro'; showToast(`❌ ${msg}`,'error'); alert(`Erro do Telegram:\n${msg}`);}
+  btn.disabled=false; btn.textContent='🔌 Testar';
+}
+
+// ---------- GERAR DIA COMPLETO ----------
+async function generateDay(){
+  const persona  = document.getElementById('fPersona').value.trim();
+  const xai_key = document.getElementById('fXai').value.trim();
+  const btn = document.getElementById('genDayBtn');
+
+  if(schedules.length > 0){
+    if(!confirm('Isso vai substituir os horários atuais. Continuar?')) return;
+  }
+
+  btn.disabled=true; btn.textContent='⏳ Gerando...';
+  const prog=document.getElementById('genProgress');
+  const bar=document.getElementById('genBar');
+  prog.style.display='block'; bar.style.width='10%';
+
+  showToast('Gerando 24 horários...' + (xai_key?(' e copys com Grok...'):''), 'info');
+
+  try{
+    const r=await api('POST','/generate-day',{persona, xai_key});
+    bar.style.width='100%';
+    if(r.ok){
+      schedules=r.schedules.map((s,i)=>({...s,_idx:i}));
+      renderSchedules();
+      showToast(`✅ ${schedules.length} horários criados!`+(xai_key?' Copys geradas pelo Grok.':''),'success');
+    } else {
+      showToast('Erro ao gerar dia','error');
+    }
+  } catch(e){
+    showToast('Erro de conexão','error');
+  }
+
+  btn.disabled=false; btn.textContent='✨ Gerar dia completo';
+  setTimeout(()=>{ prog.style.display='none'; bar.style.width='0%'; },1000);
+}
+
+// ---------- GERAR COPY INLINE ----------
+async function generateCopyInline(idx){
+  const persona  = document.getElementById('fPersona').value.trim();
+  const xai_key = document.getElementById('fXai').value.trim();
+  if(!xai_key){showToast('Informe a chave Grok/xAI primeiro','error');return;}
+  if(!persona){showToast('Preencha a persona da campanha primeiro','error');return;}
+
+  const btn=document.getElementById(`cp_${idx}`);
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  const s=schedules[idx];
+  const r=await api('POST','/generate-copy',{persona, type:s.type, xai_key});
+  if(r.ok){
+    schedules[idx].msg=r.copy;
+    renderSchedules();
+    showToast('Copy gerada!','success');
+  } else {
+    showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+    if(btn){btn.disabled=false;btn.textContent='✨';}
+  }
+}
+
+async function generateCopyModal(){
+  const persona  = document.getElementById('fPersona').value.trim();
+  const xai_key = document.getElementById('fXai').value.trim();
+  if(!xai_key){showToast('Informe a chave Grok/xAI nos campos da campanha primeiro','error');return;}
+  if(!persona){showToast('Preencha a persona da campanha primeiro','error');return;}
+  const type=document.getElementById('mType').value;
+  const btn=document.getElementById('genCopyBtn');
+  btn.disabled=true; btn.textContent='⏳';
+  const r=await api('POST','/generate-copy',{persona,type,xai_key});
+  if(r.ok){
+    document.getElementById('mMsg').value=r.copy;
+    showToast('Copy gerada!','success');
+  } else {
+    showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+  }
+  btn.disabled=false; btn.textContent='✨ IA';
+}
+
+// ---------- RENDER SCHEDULES ----------
+function renderSchedules(){
+  const sorted=[...schedules].sort((a,b)=>a.time.localeCompare(b.time));
+  document.getElementById('schedList').innerHTML=sorted.map(s=>{
+    const m=TYPE[s.type]||TYPE.text;
+    const preview=s.msg?s.msg.replace(/\n/g,' ').slice(0,40)+(s.msg.length>40?'…':''):'';
+    const mediaLabel=s.media_name?`📎 ${s.media_name.slice(0,16)}`:'';
+    const sendBtn=editingId
+      ?`<button class="sched-send" id="sb_${s._idx}" onclick="sendNow('${s.id||''}',${s._idx})" title="Enviar agora">▶</button>`
+      :'<span></span>';
+    return `<div class="sched-row">
+      <span class="sched-time">${s.time}</span>
+      <div style="min-width:0">
+        <select class="sched-sel" onchange="chType(${s._idx},this.value)">
+          ${Object.entries(TYPE).map(([k,v])=>`<option value="${k}"${k===s.type?' selected':''}>${v.icon} ${v.label}</option>`).join('')}
+        </select>
+        ${(preview||mediaLabel)?`<div class="sched-msg">${mediaLabel||preview}</div>`:''}
+      </div>
+      <button class="sched-copy" id="cp_${s._idx}" onclick="generateCopyInline(${s._idx})" title="Gerar copy com IA">✨</button>
+      ${sendBtn}
+      <button class="sched-remove" onclick="rmSched(${s._idx})">×</button>
+    </div>`;
+  }).join('');
+
+  const counts={};
+  schedules.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
+  document.getElementById('schedTags').innerHTML=Object.entries(counts).map(([t,n])=>{
+    const m=TYPE[t]||TYPE.text;
+    return `<span class="stag ${m.cls}">${m.icon} ${n} ${m.label.toLowerCase()}</span>`;
+  }).join('');
+}
+
+function chType(idx,type){ if(schedules[idx]) schedules[idx].type=type; renderSchedules(); }
+function rmSched(idx){ schedules.splice(idx,1); schedules.forEach((s,i)=>s._idx=i); renderSchedules(); }
+
+async function sendNow(schedId,idx){
+  if(sending) return;
+  if(!editingId||!schedId){showToast('Salve a campanha primeiro','error');return;}
+  sending=true;
+  const btn=document.getElementById('sb_'+idx);
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  showToast('Enviando...','info');
+  try{
+    await api('POST',`/campaigns/${editingId}/send-now/${schedId}`);
+    showToast('✅ Enviado!','success');
+  } catch(e){ showToast('Erro ao enviar','error'); }
+  if(btn){btn.disabled=false;btn.textContent='▶';}
+  sending=false;
+}
+
+// ---------- LOGS ----------
+function renderLogs(logs){
+  const sec=document.getElementById('logsSection');
+  const list=document.getElementById('logsList');
+  if(!logs||!logs.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  list.innerHTML=logs.slice(0,15).map(l=>{
+    const attempt=l.attempt?` · tentativa ${l.attempt}/5`:'';
+    const time=new Date(l.time).toLocaleString('pt-BR');
+    return `<div class="log-item ${l.success?'ok':'fail'}">
+      <div class="ls">${l.success?'✅':'❌'} ${l.detail||''}</div>
+      <div class="lt">${time}${attempt}</div>
+    </div>`;
+  }).join('');
+}
+
+function startLogRefresh(){
+  stopLogRefresh();
+  if(!editingId) return;
+  logRefreshTimer=setInterval(async()=>{
+    if(!editingId) return;
+    try{ const logs=await api('GET',`/campaigns/${editingId}/logs`); renderLogs(logs); }catch(e){}
+  },5000);
+}
+function stopLogRefresh(){ clearInterval(logRefreshTimer); logRefreshTimer=null; }
+
+// ---------- MODAL ----------
+function onTypeChange(){
+  const t=document.getElementById('mType').value;
+  document.getElementById('mediaGroup').style.display=(t==='image'||t==='video')?'block':'none';
+  document.getElementById('pollHint').style.display=t==='poll'?'block':'none';
+  document.getElementById('msgLabel').textContent=t==='poll'?'Pergunta e opções':'Mensagem / legenda';
+}
+function openModal(){
+  document.getElementById('mTime').value='08:00';
+  document.getElementById('mType').value='image';
+  document.getElementById('mMsg').value='';
+  document.getElementById('mPreviews').innerHTML='';
+  pendingPath=null; pendingName=null;
+  onTypeChange();
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function handleUpload(e){
+  const file=e.target.files[0]; if(!file) return;
+  showToast('Enviando arquivo...','info');
+  const fd=new FormData(); fd.append('file',file);
+  const r=await fetch('/api/upload',{method:'POST',body:fd});
+  const data=await r.json();
+  pendingPath=data.path; pendingName=data.name;
+  const prev=document.getElementById('mPreviews'); prev.innerHTML='';
+  if(file.type.startsWith('image/')){
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(file); img.className='preview-img';
+    prev.appendChild(img);
+  } else {
+    const b=document.createElement('div');
+    b.className='preview-badge'; b.textContent='🎬 '+file.name.slice(0,20);
+    prev.appendChild(b);
+  }
+  showToast('Arquivo enviado!','success');
+}
+
+function addSchedule(){
+  const time=document.getElementById('mTime').value;
+  const type=document.getElementById('mType').value;
+  const msg =document.getElementById('mMsg').value.trim();
+  if(!time){showToast('Informe um horário','error');return;}
+  const idx=schedules.length;
+  schedules.push({id:crypto.randomUUID(),time,type,msg,media_path:pendingPath,media_name:pendingName,_idx:idx});
+  renderSchedules(); closeModal();
+  showToast('Horário adicionado!','success');
+}
+
+// ---------- SAVE ----------
+async function saveCamp(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){showToast('Informe o nome','error');return;}
+  const token=document.getElementById('fToken').value.trim();
+  if(!token){showToast('Informe o Bot Token','error');return;}
+  const chat=document.getElementById('fChat').value.trim();
+  if(!chat){showToast('Informe o Chat ID','error');return;}
+  const body={
+    name,token,chat,
+    desc:    document.getElementById('fDesc').value.trim(),
+    persona: document.getElementById('fPersona').value.trim(),
+    xai_key: document.getElementById('fXai').value.trim(),
+    active:  isActive,
+    schedules:schedules.map(s=>({...s,_idx:undefined})),
+  };
+  let result;
+  if(editingId){ result=await api('PUT',`/campaigns/${editingId}`,body); }
+  else { result=await api('POST','/campaigns',body); editingId=result.id; }
+  await loadCamps();
+  showToast('Campanha salva!','success');
+  document.getElementById('testBtn').style.display='inline-block';
+  document.getElementById('editorTitle').textContent=name;
+  const c=campaigns.find(x=>x.id===editingId);
+  if(c) renderLogs(c.logs||[]);
+  startLogRefresh();
+}
+
+// ---------- CARDS ----------
+function renderCards(){
+  const el=document.getElementById('campCards');
+  if(!campaigns.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><h3>Nenhuma campanha ainda</h3><p>Crie sua primeira campanha para começar.</p></div>';
+    return;
+  }
+  el.innerHTML=campaigns.map(c=>{
+    const n=c.schedules?.length||0;
+    const d=c.updatedAt||c.createdAt;
+    const date=d?new Date(d).toLocaleDateString('pt-BR'):'';
+    return `<div class="camp-card" onclick="showEdit('${c.id}')">
+      <div class="camp-info">
+        <div class="camp-name">${esc(c.name)}</div>
+        <div class="camp-meta">${n} horário${n!==1?'s':''} ${date?'· '+date:''}</div>
+      </div>
+      <span class="pill ${c.active?'active':'inactive'}">${c.active?'Ativo':'Inativo'}</span>
+      <div class="camp-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" onclick="showEdit('${c.id}')">✏️</button>
+        <button class="icon-btn danger" onclick="delCamp('${c.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function delCamp(id){
+  if(!confirm('Excluir esta campanha?')) return;
+  await api('DELETE',`/campaigns/${id}`);
+  await loadCamps(); renderCards();
+  showToast('Campanha excluída','error');
+}
+
+// ---------- UTILS ----------
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+type;
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.className='',2800);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+showList();
+</script>
+</body>
+</html>
+
 :root{
   --bg:#0e0e10;--bg2:#1a1a1f;--bg3:#23232b;--bg4:#2c2c36;
   --border:#2e2e38;--border2:#3a3a48;
