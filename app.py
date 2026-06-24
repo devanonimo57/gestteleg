@@ -1,4 +1,4 @@
-import os, uuid, time, requests, json
+import os, uuid, time, requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
@@ -556,6 +556,64 @@ def validate_token():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
+@app.route("/api/campaigns/<cid>/days/<day>/slot-configs", methods=["GET"])
+def get_slot_configs(cid, day):
+    """Retorna configuração dos slots com mídia atribuída — sem gerar copy."""
+    DAY_TYPES = [
+        "image","text","image","poll",
+        "image","image","text","image",
+        "image","poll","image","text",
+        "image","image","text","image",
+        "image","poll","image","image",
+        "text","image","image","text",
+    ]
+    sb = get_sb()
+    try:
+        day_files = sb.storage.from_(BUCKET).list(path=day) or []
+    except Exception:
+        day_files = []
+    photos = sorted(
+        [f for f in day_files if f.get("name") and not f["name"].startswith(".")],
+        key=lambda f: f.get("name", "")
+    )
+    photo_idx = 0
+    configs = []
+    for hour, stype in enumerate(DAY_TYPES):
+        media_path = ""
+        media_name = ""
+        if stype in ("image", "video") and photo_idx < len(photos):
+            fname      = photos[photo_idx]["name"]
+            full_path  = f"{day}/{fname}"
+            media_path = sb.storage.from_(BUCKET).get_public_url(full_path)
+            media_name = fname
+            photo_idx += 1
+        configs.append({
+            "id":         str(uuid.uuid4()),
+            "hour":       hour,
+            "type":       stype,
+            "media_path": media_path,
+            "media_name": media_name,
+        })
+    return jsonify({"ok": True, "configs": configs})
+
+
+@app.route("/api/generate-slot-copy", methods=["POST"])
+def api_generate_slot_copy():
+    """Gera copy para um único slot (visão ou texto)."""
+    body       = request.json or {}
+    persona    = body.get("persona", "")
+    xai_key    = body.get("xai_key", "")
+    stype      = body.get("type", "text")
+    media_path = body.get("media_path", "")
+    if not xai_key:
+        return jsonify({"ok": False, "error": "Chave Grok não informada"})
+    if stype in ("image", "video") and media_path:
+        msg, err = generate_copy_vision(persona, media_path, xai_key)
+    else:
+        msg, err = generate_copy(persona, stype, xai_key)
+    return jsonify({"ok": bool(msg), "msg": msg, "error": err})
+
+
 @app.route("/api/generate-copy", methods=["POST"])
 def api_generate_copy():
     body      = request.json
@@ -614,8 +672,6 @@ def api_generate_day():
             "media_path": media_path,
             "media_name": media_name,
         })
-
-    total = len(slot_configs)
 
     def generate_for_slot(cfg):
         if not (xai_key and persona):
