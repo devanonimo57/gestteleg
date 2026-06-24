@@ -19,7 +19,6 @@ scheduler.start()
 MAX_RETRIES  = 5
 RETRY_DELAYS = [5, 10, 30, 60, 120]
 
-# Distribuição padrão de 24 horários: 16 imagens, 5 reações, 3 enquetes
 DEFAULT_DAY_TYPES = [
     "image","reaction","image","poll",
     "image","image","reaction","image",
@@ -29,7 +28,7 @@ DEFAULT_DAY_TYPES = [
     "reaction","image","image","reaction",
 ]
 
-# ---------- Banco de dados (Supabase) ----------
+# ---------- Banco de dados ----------
 
 def load_data():
     try:
@@ -43,36 +42,56 @@ def save_data(campaigns):
     try:
         sb = get_sb()
         new_ids = {c["id"] for c in campaigns}
-
-        # Remove campanhas deletadas
         existing = sb.table("campaigns").select("id").execute()
         for row in existing.data:
             if row["id"] not in new_ids:
                 sb.table("campaigns").delete().eq("id", row["id"]).execute()
-
-        # Upsert todas as campanhas
         for c in campaigns:
             sb.table("campaigns").upsert({"id": c["id"], "data": c}).execute()
     except Exception as e:
         print(f"[DB] save_data error: {e}")
 
-# ---------- Helpers ----------
+# ---------- Helpers de mídia por dia ----------
 
-def build_default_schedules():
-    schedules = []
-    for hour, stype in enumerate(DEFAULT_DAY_TYPES):
-        schedules.append({
-            "id": str(uuid.uuid4()),
-            "time": f"{hour:02d}:00",
-            "type": stype,
-            "msg": "",
-            "media_path": "",
-            "media_name": "",
-        })
-    return schedules
+def pick_next_media(campaign, date):
+    """Retorna a próxima foto não postada da pasta do dia."""
+    sb = get_sb()
+    try:
+        day_files = sb.storage.from_(BUCKET).list(path=date) or []
+    except Exception as e:
+        print(f"[MEDIA] Erro ao listar pasta {date}: {e}")
+        return None
+
+    files = sorted(
+        [f for f in day_files if f.get("name") and not f["name"].startswith(".")],
+        key=lambda f: f.get("name", "")
+    )
+    if not files:
+        return None
+
+    posted = set(campaign.get("media_posted", {}).get(date, []))
+    for f in files:
+        if f["name"] not in posted:
+            full_path = f"{date}/{f['name']}"
+            url = sb.storage.from_(BUCKET).get_public_url(full_path)
+            return {"name": f["name"], "path": full_path, "url": url}
+
+    return None  # Todas as fotos já foram postadas
+
+def mark_media_posted(campaign_id, date, filename):
+    """Marca uma foto como postada no histórico da campanha."""
+    campaigns = load_data()
+    for c in campaigns:
+        if c["id"] == campaign_id:
+            mp = c.setdefault("media_posted", {})
+            mp.setdefault(date, [])
+            if filename not in mp[date]:
+                mp[date].append(filename)
+    save_data(campaigns)
+
+# ---------- Geração de conteúdo (Grok) ----------
 
 def generate_copy(persona, post_type, xai_key):
-    """Gera copy via Grok usando a persona da campanha."""
     if not xai_key:
         return "", "Chave Grok/xAI nao informada"
 
@@ -97,7 +116,7 @@ Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4)."
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
-                "model": "grok-4.3",
+                "model": "grok-3",
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user",   "content": prompt},
@@ -105,21 +124,19 @@ Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4)."
                 "max_tokens": 200,
                 "temperature": 0.85,
             },
-            timeout=15,
+            timeout=20,
         )
         try:
             data = r.json()
         except ValueError:
             data = {"error": r.text[:300]}
         if not r.ok:
-            print(f"[GROK ERROR] {data}")
             err = data.get("error", data)
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
             return "", f"xAI HTTP {r.status_code}: {err}"
         return data["choices"][0]["message"]["content"].strip(), ""
     except Exception as e:
-        print(f"[GROK ERROR] {e}")
         return "", str(e)
 
 # ---------- Telegram ----------
@@ -130,7 +147,6 @@ def send_text(token, chat_id, text):
     return r.json()
 
 def send_photo(token, chat_id, path_or_url, caption=""):
-    # Supabase Storage devolve URL pública — usa direto no Telegram
     if path_or_url.startswith("http"):
         r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
             json={"chat_id": chat_id, "photo": path_or_url, "caption": caption}, timeout=30)
@@ -157,26 +173,114 @@ def send_poll(token, chat_id, question, options):
         json={"chat_id": chat_id, "question": question, "options": options}, timeout=20)
     return r.json()
 
-def do_send(campaign, schedule):
+# ---------- Envio automático ----------
+
+def execute_schedule(campaign_id, schedule_id):
+    campaigns = load_data()
+    campaign  = next((c for c in campaigns if c["id"] == campaign_id), None)
+    if not campaign or not campaign.get("active"):
+        return
+    schedule = next((s for s in campaign.get("schedules", []) if s["id"] == schedule_id), None)
+    if not schedule:
+        return
+
     token   = campaign["token"]
     chat_id = campaign["chat"]
     stype   = schedule.get("type", "text")
-    msg     = schedule.get("msg", "") or ""
-    media   = schedule.get("media_path", "") or ""
+    xai_key = campaign.get("xai_key", "")
+    persona = campaign.get("persona", "")
+    today   = datetime.now().strftime("%Y-%m-%d")
 
-    if stype in ("image", "video") and media:
-        result = send_photo(token, chat_id, media, msg) if stype == "image" else send_video(token, chat_id, media, msg)
-    elif stype == "poll":
+    print(f"[SEND] {stype} | campaign={campaign_id[:8]} | {today}")
+
+    # ── Imagem / Vídeo ──────────────────────────────────────────
+    if stype in ("image", "video"):
+        media = pick_next_media(campaign, today)
+        if not media:
+            detail = f"Sem fotos disponíveis na pasta {today}"
+            print(f"[SEND] {detail}")
+            log_entry(campaign_id, schedule_id, False, detail)
+            return
+
+        # Gera legenda com Grok (se configurado)
+        caption = ""
+        if xai_key and persona:
+            caption, err = generate_copy(persona, stype, xai_key)
+            if err:
+                print(f"[GROK] {err}")
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                if stype == "image":
+                    result = send_photo(token, chat_id, media["url"], caption)
+                else:
+                    result = send_video(token, chat_id, media["url"], caption)
+                ok     = result.get("ok", False)
+                detail = result.get("description", "Enviado" if ok else "Erro")
+                if ok:
+                    mark_media_posted(campaign_id, today, media["name"])
+                log_entry(campaign_id, schedule_id, ok, detail, attempt)
+                return
+            except requests.exceptions.Timeout:
+                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
+            except Exception as e:
+                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAYS[attempt - 1])
+        return
+
+    # ── Reação / Texto ──────────────────────────────────────────
+    if stype in ("reaction", "text"):
+        msg = schedule.get("msg", "").strip()
+        if not msg:
+            if xai_key and persona:
+                msg, err = generate_copy(persona, stype, xai_key)
+                if err:
+                    print(f"[GROK] {err}")
+            if not msg:
+                msg = "Post agendado"
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                result = send_text(token, chat_id, msg)
+                ok     = result.get("ok", False)
+                detail = result.get("description", "Enviado" if ok else "Erro")
+                log_entry(campaign_id, schedule_id, ok, detail, attempt)
+                return
+            except requests.exceptions.Timeout:
+                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
+            except Exception as e:
+                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAYS[attempt - 1])
+        return
+
+    # ── Enquete ─────────────────────────────────────────────────
+    if stype == "poll":
+        msg = schedule.get("msg", "").strip()
+        if not msg:
+            if xai_key and persona:
+                msg, err = generate_copy(persona, "poll", xai_key)
+                if err:
+                    print(f"[GROK] {err}")
+
         lines    = [l.strip() for l in msg.split("\n") if l.strip()]
-        question = lines[0] if lines else "Enquete"
-        options  = lines[1:5] if len(lines) > 1 else ["Sim", "Nao"]
-        result   = send_poll(token, chat_id, question, options)
-    else:
-        result = send_text(token, chat_id, msg or "Post agendado")
+        question = lines[0] if lines else "O que você acha?"
+        options  = lines[1:5] if len(lines) > 1 else ["Sim", "Não"]
 
-    ok     = result.get("ok", False)
-    detail = result.get("description", "Enviado com sucesso" if ok else "Erro desconhecido")
-    return ok, detail
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                result = send_poll(token, chat_id, question, options)
+                ok     = result.get("ok", False)
+                detail = result.get("description", "Enviado" if ok else "Erro")
+                log_entry(campaign_id, schedule_id, ok, detail, attempt)
+                return
+            except requests.exceptions.Timeout:
+                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
+            except Exception as e:
+                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAYS[attempt - 1])
 
 def log_entry(campaign_id, schedule_id, success, detail, attempt=1):
     campaigns = load_data()
@@ -192,41 +296,15 @@ def log_entry(campaign_id, schedule_id, success, detail, attempt=1):
             c["logs"] = c["logs"][:100]
     save_data(campaigns)
 
-def execute_schedule(campaign_id, schedule_id):
-    campaigns = load_data()
-    campaign  = next((c for c in campaigns if c["id"] == campaign_id), None)
-    if not campaign or not campaign.get("active"):
-        return
-    schedule  = next((s for s in campaign.get("schedules", []) if s["id"] == schedule_id), None)
-    if not schedule:
-        return
-
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            print(f"[SEND] attempt={attempt}/{MAX_RETRIES} campaign={campaign_id[:8]} schedule={schedule_id[:8]}")
-            ok, detail = do_send(campaign, schedule)
-            log_entry(campaign_id, schedule_id, ok, detail, attempt)
-            if ok:
-                print(f"[SEND] enviado na tentativa {attempt}")
-                return
-            print(f"[SEND] erro do Telegram: {detail}")
-            return
-        except requests.exceptions.Timeout:
-            detail = f"Timeout na tentativa {attempt}/{MAX_RETRIES}"
-            log_entry(campaign_id, schedule_id, False, detail, attempt)
-        except requests.exceptions.ConnectionError:
-            detail = f"Erro de conexao na tentativa {attempt}/{MAX_RETRIES}"
-            log_entry(campaign_id, schedule_id, False, detail, attempt)
-        except Exception as e:
-            detail = f"Erro inesperado: {str(e)[:80]}"
-            log_entry(campaign_id, schedule_id, False, detail, attempt)
-
-        if attempt < MAX_RETRIES:
-            wait = RETRY_DELAYS[attempt - 1]
-            print(f"[SEND] aguardando {wait}s antes da tentativa {attempt+1}...")
-            time.sleep(wait)
-
-    print(f"[SEND] falhou apos {MAX_RETRIES} tentativas")
+def build_default_schedules():
+    return [{
+        "id":         str(uuid.uuid4()),
+        "time":       f"{hour:02d}:00",
+        "type":       stype,
+        "msg":        "",
+        "media_path": "",
+        "media_name": "",
+    } for hour, stype in enumerate(DEFAULT_DAY_TYPES)]
 
 def register_all_jobs():
     scheduler.remove_all_jobs()
@@ -251,7 +329,6 @@ register_all_jobs()
 
 @app.route("/api/ping")
 def ping():
-    """Usado pelo UptimeRobot para manter o serviço acordado."""
     return jsonify({"ok": True, "time": datetime.now().isoformat()})
 
 @app.route("/api/campaigns", methods=["GET"])
@@ -261,10 +338,11 @@ def get_campaigns():
 @app.route("/api/campaigns", methods=["POST"])
 def create_campaign():
     data = request.json
-    data["id"]        = str(uuid.uuid4())
-    data["createdAt"] = datetime.now().isoformat()
-    data["logs"]      = []
-    data["xai_key"]   = data.get("xai_key", "")
+    data["id"]           = str(uuid.uuid4())
+    data["createdAt"]    = datetime.now().isoformat()
+    data["logs"]         = []
+    data["media_posted"] = {}
+    data["xai_key"]      = data.get("xai_key", "")
     if not data.get("schedules"):
         data["schedules"] = build_default_schedules()
     for s in data.get("schedules", []):
@@ -281,10 +359,11 @@ def update_campaign(cid):
     campaigns = load_data()
     for i, c in enumerate(campaigns):
         if c["id"] == cid:
-            body["id"]        = cid
-            body["createdAt"] = c.get("createdAt", datetime.now().isoformat())
-            body["logs"]      = c.get("logs", [])
-            body["xai_key"]   = body.get("xai_key", "")
+            body["id"]           = cid
+            body["createdAt"]    = c.get("createdAt", datetime.now().isoformat())
+            body["logs"]         = c.get("logs", [])
+            body["media_posted"] = c.get("media_posted", {})
+            body["xai_key"]      = body.get("xai_key", "")
             if not body.get("schedules"):
                 body["schedules"] = build_default_schedules()
             for s in body.get("schedules", []):
@@ -309,10 +388,9 @@ def test_campaign(cid):
     if not c:
         return jsonify({"ok": False, "error": "Campanha nao encontrada"}), 404
     try:
-        result = send_text(c["token"], c["chat"], "Teste de conexao - bot funcionando!")
+        result = send_text(c["token"], c["chat"], "✅ Teste de conexão — bot funcionando!")
         ok     = result.get("ok", False)
-        detail = result.get("description", "")
-        return jsonify({"ok": ok, "detail": detail, "raw": result})
+        return jsonify({"ok": ok, "detail": result.get("description", ""), "raw": result})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -328,47 +406,127 @@ def get_logs(cid):
     c = next((x for x in campaigns if x["id"] == cid), None)
     return jsonify(c.get("logs", []) if c else [])
 
+# ---------- Upload ----------
+
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
-    f = request.files.get("file")
+    f   = request.files.get("file")
+    day = request.form.get("day", "").strip()   # YYYY-MM-DD opcional
     if not f:
         return jsonify({"error": "no file"}), 400
-    ext      = os.path.splitext(f.filename)[1]
-    name     = str(uuid.uuid4()) + ext
-    contents = f.read()
+    ext          = os.path.splitext(f.filename)[1]
+    unique_name  = str(uuid.uuid4()) + ext
+    storage_path = f"{day}/{unique_name}" if day else unique_name
+    contents     = f.read()
     sb = get_sb()
     sb.storage.from_(BUCKET).upload(
-        path=name,
+        path=storage_path,
         file=contents,
         file_options={"content-type": f.content_type or "application/octet-stream"}
     )
-    public_url = sb.storage.from_(BUCKET).get_public_url(name)
-    return jsonify({"path": public_url, "name": f.filename})
+    public_url = sb.storage.from_(BUCKET).get_public_url(storage_path)
+    return jsonify({"path": public_url, "name": f.filename, "storage_name": unique_name})
+
+# ---------- Galeria por dia ----------
+
+@app.route("/api/media/days", methods=["POST"])
+def create_day():
+    """Cria uma pasta de dia no Storage com um arquivo .keep."""
+    day = (request.json or {}).get("day", "").strip()
+    if not day:
+        return jsonify({"error": "day required"}), 400
+    sb = get_sb()
+    try:
+        sb.storage.from_(BUCKET).upload(
+            path=f"{day}/.keep",
+            file=b"",
+            file_options={"content-type": "text/plain", "upsert": "true"}
+        )
+    except Exception:
+        pass  # Pasta já existe
+    return jsonify({"ok": True, "day": day})
 
 @app.route("/api/media", methods=["GET"])
 def list_media():
-    sb = get_sb()
-    files = sb.storage.from_(BUCKET).list() or []
-    result = []
-    total_bytes = 0
-    for f in files:
-        name = f.get("name", "")
-        if not name or name.startswith("."):
-            continue
-        meta = f.get("metadata") or {}
-        size = meta.get("size") or 0
-        total_bytes += size
-        result.append({
-            "name": name,
-            "size": size,
-            "url":  sb.storage.from_(BUCKET).get_public_url(name),
-        })
-    return jsonify({"files": result, "total_bytes": total_bytes, "limit_bytes": 1_073_741_824})
+    campaign_id = request.args.get("campaign_id", "")
+    real_sb     = get_sb()
 
-@app.route("/api/media/<name>", methods=["DELETE"])
+    # Posted map para esta campanha
+    posted_by_day = {}
+    if campaign_id:
+        campaigns = load_data()
+        c = next((x for x in campaigns if x["id"] == campaign_id), None)
+        if c:
+            posted_by_day = c.get("media_posted", {})
+
+    total_bytes = 0
+    days_result = []
+    root_files  = []
+
+    root_items = real_sb.storage.from_(BUCKET).list() or []
+    day_folders = []
+
+    for item in root_items:
+        name = item.get("name", "")
+        if not name:
+            continue
+        meta = item.get("metadata")
+        if meta is None:
+            # É uma "pasta" (dia)
+            day_folders.append(name)
+        elif not name.startswith("."):
+            size = meta.get("size") or 0
+            total_bytes += size
+            root_files.append({
+                "name": name, "size": size,
+                "url": real_sb.storage.from_(BUCKET).get_public_url(name),
+                "posted": False,
+            })
+
+    # Lista arquivos de cada pasta de dia
+    for day in sorted(day_folders, reverse=True):
+        posted_set = set(posted_by_day.get(day, []))
+        try:
+            day_items = real_sb.storage.from_(BUCKET).list(path=day) or []
+        except Exception:
+            day_items = []
+
+        files = []
+        for f in sorted(day_items, key=lambda x: x.get("name", "")):
+            fname = f.get("name", "")
+            if not fname or fname.startswith("."):
+                continue
+            meta = f.get("metadata") or {}
+            size = meta.get("size") or 0
+            total_bytes += size
+            files.append({
+                "name":    fname,
+                "path":    f"{day}/{fname}",
+                "size":    size,
+                "url":     real_sb.storage.from_(BUCKET).get_public_url(f"{day}/{fname}"),
+                "posted":  fname in posted_set,
+            })
+
+        days_result.append({
+            "day":           day,
+            "files":         files,
+            "total":         len(files),
+            "posted_count":  len([f for f in files if f["posted"]]),
+        })
+
+    return jsonify({
+        "days":        days_result,
+        "root_files":  root_files,
+        "total_bytes": total_bytes,
+        "limit_bytes": 1_073_741_824,
+    })
+
+@app.route("/api/media/<path:name>", methods=["DELETE"])
 def delete_media(name):
     get_sb().storage.from_(BUCKET).remove([name])
     return jsonify({"ok": True})
+
+# ---------- IA ----------
 
 @app.route("/api/validate-token", methods=["POST"])
 def validate_token():
@@ -405,12 +563,8 @@ def api_generate_day():
         if xai_key and persona:
             msg, _ = generate_copy(persona, stype, xai_key)
         schedules.append({
-            "id":         str(uuid.uuid4()),
-            "time":       f"{hour:02d}:00",
-            "type":       stype,
-            "msg":        msg,
-            "media_path": "",
-            "media_name": "",
+            "id": str(uuid.uuid4()), "time": f"{hour:02d}:00",
+            "type": stype, "msg": msg, "media_path": "", "media_name": "",
         })
     return jsonify({"ok": True, "schedules": schedules})
 
