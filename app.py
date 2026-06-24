@@ -120,7 +120,7 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
-                "model": "grok-2-vision-1212",
+                "model": "grok-4.3",
                 "messages": [
                     {
                         "role": "user",
