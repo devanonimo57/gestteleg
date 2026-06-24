@@ -114,17 +114,13 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
         print(f"[Vision] Erro ao baixar imagem: {e}")
         return "", f"Erro ao baixar imagem: {e}"
 
-    historico = ""
-    if used_texts:
-        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
-        historico = f"\n\nTextos já usados hoje (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
-
-    system = f"""{persona}
-Você receberá uma foto. Observe TODOS os detalhes visuais: pose, expressão, partes do corpo visíveis, \
-cenário, roupa ou ausência dela, ângulo. Crie uma legenda curta e explícita que descreva exatamente \
-o que está acontecendo na foto, de forma sensual e provocante. \
-Escreva na primeira pessoa, como se fosse a modelo falando sobre aquela cena específica. \
-Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{historico}"""
+    # Prompt de visão: foco total no que está na foto, sem persona
+    # A persona fica só para posts de texto — aqui o Grok precisa descrever o que vê
+    system = """Você escreve legendas explícitas e provocantes para fotos de modelos adultas no Telegram.
+Olhe a foto com atenção e identifique: pose, expressão facial, partes do corpo visíveis, cenário, ângulo, roupa ou ausência.
+Escreva uma legenda curta (2-3 frases) na primeira pessoa descrevendo EXATAMENTE o que está acontecendo na foto.
+Seja direta, sensual e explícita. Mencione o que você vê: boca, língua, peitos, pose, espelho, cama — o que estiver na imagem.
+Escreva APENAS o texto do post, sem explicações, sem aspas."""
 
     try:
         r = requests.post(
@@ -143,7 +139,7 @@ Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{
                             },
                             {
                                 "type": "text",
-                                "text": "Descreve o que está acontecendo NESSA foto e escreve a legenda baseada no que você vê.",
+                                "text": "Descreve exatamente o que você vê nessa foto e escreve a legenda.",
                             },
                         ],
                     },
