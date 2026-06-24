@@ -574,6 +574,25 @@ textarea.input-base{resize:vertical;min-height:88px}
 .storage-track{height:3px;background:rgba(255,255,255,.08);border-radius:99px}
 .storage-fill{height:3px;border-radius:99px;background:var(--primary);transition:width .4s}
 
+/* ─── DAY NAV CHIPS ─── */
+.day-chip{
+  display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+  border-radius:10px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--muted-fg);
+  padding:6px 10px;cursor:pointer;transition:background .15s,border-color .15s,color .15s;
+  min-width:44px;
+}
+.day-chip:hover{background:rgba(255,255,255,.06);color:var(--foreground)}
+.day-chip.active{
+  background:color-mix(in oklab,var(--primary) 15%,transparent);
+  border-color:color-mix(in oklab,var(--primary) 40%,transparent);
+  color:var(--primary);
+}
+.day-chip-num{font-size:14px;font-weight:700;line-height:1}
+.day-chip-wd{font-size:9px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.day-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--success);margin-top:2px;display:none}
+.day-chip.has-photos .day-chip-dot{display:block}
+
 /* ─── PROGRESS ─── */
 .gen-progress{height:2px;background:rgba(255,255,255,.08);border-radius:1px;margin:12px 0;display:none}
 .gen-bar{height:2px;background:linear-gradient(90deg,var(--primary),var(--primary-glow));border-radius:1px;transition:width .3s}
@@ -768,10 +787,15 @@ svg.ico{display:block;flex-shrink:0}
 
     <!-- RIGHT — Schedule -->
     <div class="card sched-panel" style="position:sticky;top:76px">
+      <!-- Day navigator -->
+      <div id="dayNav" style="padding:16px 20px 0;border-bottom:1px solid var(--border);margin-bottom:0">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:10px">Selecionar dia</div>
+        <div id="dayNavChips" style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:14px"></div>
+      </div>
       <div class="sched-header">
         <div>
           <div class="sched-hdr-title">Cronograma</div>
-          <div class="sched-hdr-sub">Horários do dia</div>
+          <div class="sched-hdr-sub" id="schedDayLabel">Horários do dia</div>
         </div>
         <div class="sched-pills" id="schedPills"></div>
       </div>
@@ -1134,7 +1158,7 @@ function showList(){
 }
 
 function showNew(){
-  editingId=null;isActive=true;schedules=defaultSchedules();
+  editingId=null;isActive=true;schedules=[];
   pendingPath=null;pendingName=null;
   ['fName','fDesc','fToken','fChat','fPersona','fXai'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('editorTitle').textContent='Nova Campanha';
@@ -1149,6 +1173,7 @@ function showNew(){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title='Nova Campanha · TeleFluxo';
+  selectedDay='';loadDayPhotoCounts();
 }
 
 function showEdit(id){
@@ -1179,6 +1204,7 @@ function showEdit(id){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title=`${c.name} · TeleFluxo`;
+  selectedDay='';loadDayPhotoCounts();
   startLogTimer();
 }
 
@@ -1406,6 +1432,58 @@ async function generateDay(){
   }catch(e){showToast('Erro de conexão','error');}
   btn.disabled=false;
   setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
+}
+
+// ─── DAY NAVIGATOR ───
+let selectedDay=''; // YYYY-MM-DD
+let dayPhotoCounts={}; // {YYYY-MM-DD: count}
+
+const WEEKDAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function buildDayNav(){
+  const container=document.getElementById('dayNavChips');
+  if(!container) return;
+  const today=new Date();
+  const chips=[];
+  for(let i=0;i<14;i++){
+    const d=new Date(today);
+    d.setDate(today.getDate()+i);
+    const iso=d.toISOString().slice(0,10);
+    const day=d.getDate();
+    const wd=WEEKDAYS[d.getDay()];
+    const count=dayPhotoCounts[iso]||0;
+    const isToday=i===0;
+    const isActive=selectedDay===iso||(selectedDay===''&&i===0);
+    chips.push(`<div class="day-chip${isActive?' active':''}${count>0?' has-photos':''}" onclick="selectDay('${iso}')">
+      <span class="day-chip-num">${day}</span>
+      <span class="day-chip-wd">${isToday?'Hoje':wd}</span>
+      <span class="day-chip-dot" title="${count} foto(s)"></span>
+    </div>`);
+  }
+  container.innerHTML=chips.join('');
+  // update label
+  const lbl=document.getElementById('schedDayLabel');
+  if(lbl){
+    const active=selectedDay||new Date().toISOString().slice(0,10);
+    const [y,m,dd]=active.split('-');
+    const count=dayPhotoCounts[active]||0;
+    lbl.textContent=`${dd}/${m}/${y}${count?` · ${count} foto(s) disponível`:' · sem fotos'}`;
+  }
+}
+
+async function loadDayPhotoCounts(){
+  try{
+    const r=await fetch('/api/media');
+    const data=await r.json();
+    dayPhotoCounts={};
+    (data.days||[]).forEach(d=>{dayPhotoCounts[d.day]=d.total;});
+  }catch(e){}
+  buildDayNav();
+}
+
+function selectDay(iso){
+  selectedDay=iso;
+  buildDayNav();
 }
 
 // ─── LOGS ───
