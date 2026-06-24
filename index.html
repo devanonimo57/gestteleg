@@ -790,7 +790,10 @@ svg.ico{display:block;flex-shrink:0}
       <!-- Day navigator -->
       <div id="dayNav" style="padding:16px 20px 0;border-bottom:1px solid var(--border);margin-bottom:0">
         <div style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:10px">Selecionar dia</div>
-        <div id="dayNavChips" style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:14px"></div>
+        <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;padding-bottom:14px">
+        <div id="dayNavChips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+        <button onclick="addNextDay()" title="Adicionar próximo dia" style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:56px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted-fg);cursor:pointer;font-size:20px;transition:background .15s,color .15s;flex-shrink:0" onmouseover="this.style.background='rgba(255,255,255,.05)';this.style.color='var(--foreground)'" onmouseout="this.style.background='transparent';this.style.color='var(--muted-fg)'">+</button>
+      </div>
       </div>
       <div class="sched-header">
         <div>
@@ -1173,7 +1176,7 @@ function showNew(){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title='Nova Campanha · TeleFluxo';
-  selectedDay='';loadDayPhotoCounts();
+  selectedDay='';visibleDays=7;loadDayPhotoCounts();
 }
 
 function showEdit(id){
@@ -1204,7 +1207,7 @@ function showEdit(id){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title=`${c.name} · TeleFluxo`;
-  selectedDay='';loadDayPhotoCounts();
+  selectedDay='';visibleDays=7;loadDayPhotoCounts();
   startLogTimer();
 }
 
@@ -1437,6 +1440,7 @@ async function generateDay(){
 // ─── DAY NAVIGATOR ───
 let selectedDay=''; // YYYY-MM-DD
 let dayPhotoCounts={}; // {YYYY-MM-DD: count}
+let visibleDays=7;
 
 const WEEKDAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
@@ -1445,7 +1449,7 @@ function buildDayNav(){
   if(!container) return;
   const today=new Date();
   const chips=[];
-  for(let i=0;i<14;i++){
+  for(let i=0;i<visibleDays;i++){
     const d=new Date(today);
     d.setDate(today.getDate()+i);
     const iso=d.toISOString().slice(0,10);
@@ -1483,6 +1487,11 @@ async function loadDayPhotoCounts(){
 
 function selectDay(iso){
   selectedDay=iso;
+  buildDayNav();
+}
+
+function addNextDay(){
+  visibleDays++;
   buildDayNav();
 }
 
