@@ -54,7 +54,6 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
         lista = "\n".join(f"- {t}" for t in used_texts[-10:])
         historico = f"\n\nTextos já usados (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
 
-    # Temas variados para não ficar só falando de manchas
     temas_texto = [
         "convide o seguidor pra um conteúdo exclusivo, com desejo e intimidade",
         "faça uma provocação sexual direta, como se estivesse mandando mensagem pro seguidor",
@@ -124,11 +123,8 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
 
 
 def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
-    """Baixa a imagem, converte para base64 e envia ao Grok Vision."""
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
-
-    # Baixa a imagem e converte para base64 (evita problemas de acesso de URL)
     try:
         img_resp = requests.get(image_url, timeout=15)
         img_resp.raise_for_status()
@@ -138,30 +134,26 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
     except Exception as e:
         print(f"[Vision] Erro ao baixar imagem: {e}")
         return "", f"Erro ao baixar imagem: {e}"
-
-    # Prompt simples e direto — igual ao que funciona no chat do Grok
     try:
         r = requests.post(
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
                 "model": "grok-4.3",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image_url", "image_url": {"url": img_data_url}},
-                            {"type": "text", "text": (
-                                "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto, "
-                                "falando exatamente o que tá acontecendo na imagem. "
-                                "Escreve na primeira pessoa, como se você fosse a gostosa da foto. "
-                                "Usa linguagem coloquial brasileira, gírias naturais, jeito de falar de mulher safada mesmo. "
-                                "Sem palavras chatas como 'exótico', 'sensual', 'provocante'. "
-                                "Máximo 2 frases. Só o texto, sem explicação."
-                            )},
-                        ],
-                    }
-                ],
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": img_data_url}},
+                        {"type": "text", "text": (
+                            "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto, "
+                            "falando exatamente o que tá acontecendo na imagem. "
+                            "Escreve na primeira pessoa, como se você fosse a gostosa da foto. "
+                            "Usa linguagem coloquial brasileira, gírias naturais, jeito de falar de mulher safada mesmo. "
+                            "Sem palavras chatas como 'exótico', 'sensual', 'provocante'. "
+                            "Máximo 2 frases. Só o texto, sem explicação."
+                        )},
+                    ],
+                }],
                 "max_tokens": 250,
                 "temperature": 0.95,
             },
@@ -186,37 +178,19 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
 
 # ---------- Telegram ----------
 
-def _build_markup(cta_buttons):
-    """cta_buttons: lista de {label, url}. Cada botão vai numa linha separada."""
-    if not cta_buttons:
-        return None
-    rows = [[{"text": b["label"], "url": b["url"]}] for b in cta_buttons if b.get("url")]
-    if not rows:
-        return None
-    return {"inline_keyboard": rows}
-
-def send_text(token, chat_id, text, cta_buttons=None):
-    payload = {"chat_id": chat_id, "text": text}
-    markup = _build_markup(cta_buttons or [])
-    if markup:
-        payload["reply_markup"] = markup
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
+def send_text(token, chat_id, text):
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+        json={"chat_id": chat_id, "text": text}, timeout=20)
     return r.json()
 
-def send_photo(token, chat_id, url, caption="", cta_buttons=None):
-    payload = {"chat_id": chat_id, "photo": url, "caption": caption}
-    markup = _build_markup(cta_buttons or [])
-    if markup:
-        payload["reply_markup"] = markup
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto", json=payload, timeout=30)
+def send_photo(token, chat_id, url, caption=""):
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
+        json={"chat_id": chat_id, "photo": url, "caption": caption}, timeout=30)
     return r.json()
 
-def send_video(token, chat_id, url, caption="", cta_buttons=None):
-    payload = {"chat_id": chat_id, "video": url, "caption": caption}
-    markup = _build_markup(cta_buttons or [])
-    if markup:
-        payload["reply_markup"] = markup
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo", json=payload, timeout=60)
+def send_video(token, chat_id, url, caption=""):
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo",
+        json={"chat_id": chat_id, "video": url, "caption": caption}, timeout=60)
     return r.json()
 
 def send_poll(token, chat_id, question, options):
@@ -231,33 +205,26 @@ def execute_schedule(campaign_id, hour, minute):
     campaign  = next((c for c in campaigns if c["id"] == campaign_id), None)
     if not campaign or not campaign.get("active"):
         return
-
     today    = datetime.now().strftime("%Y-%m-%d")
     time_str = f"{hour:02d}:{minute:02d}"
-
     day_data = campaign.get("days", {}).get(today, {})
     slots    = day_data.get("slots", [])
     slot     = next((s for s in slots if s.get("time") == time_str), None)
-
     if not slot:
         print(f"[SKIP] {campaign_id[:8]} {today} {time_str} — sem slot configurado")
         return
-
     _run_slot(campaign, slot, today)
 
 def _run_slot(campaign, slot, day):
-    token     = campaign["token"]
-    chat_id   = campaign["chat"]
-    stype     = slot.get("type", "text")
-    msg       = slot.get("msg", "").strip()
-    media     = slot.get("media_path", "").strip()
-    cta_buttons = campaign.get("cta_buttons", [])
-
+    token   = campaign["token"]
+    chat_id = campaign["chat"]
+    stype   = slot.get("type", "text")
+    msg     = slot.get("msg", "").strip()
+    media   = slot.get("media_path", "").strip()
     print(f"[SEND] {stype} | {day} {slot.get('time')} | campaign={campaign['id'][:8]}")
-
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            result = _dispatch(token, chat_id, stype, media, msg, cta_buttons)
+            result = _dispatch(token, chat_id, stype, media, msg)
             ok     = result.get("ok", False)
             detail = result.get("description", "Enviado" if ok else "Erro")
             log_entry(campaign["id"], slot["id"], ok, detail, attempt)
@@ -269,21 +236,21 @@ def _run_slot(campaign, slot, day):
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_DELAYS[attempt - 1])
 
-def _dispatch(token, chat_id, stype, media, msg, cta_buttons=None):
+def _dispatch(token, chat_id, stype, media, msg):
     if stype in ("image", "video"):
         if not media:
             return {"ok": False, "description": "Sem mídia configurada"}
         if stype == "image":
-            return send_photo(token, chat_id, media, msg, cta_buttons)
+            return send_photo(token, chat_id, media, msg)
         else:
-            return send_video(token, chat_id, media, msg, cta_buttons)
+            return send_video(token, chat_id, media, msg)
     elif stype == "poll":
         lines    = [l.strip() for l in msg.split("\n") if l.strip()]
         question = lines[0] if lines else "O que você acha?"
         options  = lines[1:5] if len(lines) > 1 else ["Sim", "Não"]
         return send_poll(token, chat_id, question, options)
     else:
-        return send_text(token, chat_id, msg or ".", cta_buttons)
+        return send_text(token, chat_id, msg or ".")
 
 def log_entry(campaign_id, slot_id, success, detail, attempt=1):
     campaigns = load_data()
@@ -383,27 +350,19 @@ def test_campaign(cid):
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
-# ---------- Dias da campanha ----------
-
 @app.route("/api/campaigns/<cid>/days", methods=["POST"])
 def create_campaign_day(cid):
-    """Cria um dia na campanha E a pasta no Storage."""
     day = (request.json or {}).get("day", "").strip()
     if not day:
         return jsonify({"error": "day required"}), 400
-
     campaigns = load_data()
     c = next((x for x in campaigns if x["id"] == cid), None)
     if not c:
         return jsonify({"error": "not found"}), 404
-
-    # Cria entrada no campaign.days se não existir
     c.setdefault("days", {})
     if day not in c["days"]:
         c["days"][day] = {"slots": []}
     save_data(campaigns)
-
-    # Cria pasta no Supabase Storage
     sb = get_sb()
     try:
         sb.storage.from_(BUCKET).upload(
@@ -413,7 +372,6 @@ def create_campaign_day(cid):
         )
     except Exception:
         pass
-
     register_all_jobs()
     return jsonify({"ok": True, "day": day})
 
@@ -428,7 +386,6 @@ def get_campaign_day(cid, day):
 
 @app.route("/api/campaigns/<cid>/days/<day>", methods=["PUT"])
 def save_campaign_day(cid, day):
-    """Salva os slots de um dia específico."""
     body      = request.json or {}
     slots     = body.get("slots", [])
     campaigns = load_data()
@@ -443,14 +400,12 @@ def save_campaign_day(cid, day):
 
 @app.route("/api/campaigns/<cid>/days/<day>", methods=["DELETE"])
 def delete_campaign_day(cid, day):
-    """Remove o dia da campanha E apaga a pasta/fotos do Storage."""
     campaigns = load_data()
     for c in campaigns:
         if c["id"] == cid:
             c.get("days", {}).pop(day, None)
             save_data(campaigns)
             register_all_jobs()
-            # Apaga todos os arquivos da pasta no Storage
             try:
                 sb = get_sb()
                 items = sb.storage.from_(BUCKET).list(path=day) or []
@@ -464,7 +419,6 @@ def delete_campaign_day(cid, day):
 
 @app.route("/api/campaigns/<cid>/days/<day>/send-now", methods=["POST"])
 def send_now_slot(cid, day):
-    """Envia um slot específico imediatamente."""
     slot_id = (request.json or {}).get("slot_id", "")
     campaigns = load_data()
     c = next((x for x in campaigns if x["id"] == cid), None)
@@ -483,8 +437,6 @@ def get_logs(cid):
     campaigns = load_data()
     c = next((x for x in campaigns if x["id"] == cid), None)
     return jsonify(c.get("logs", []) if c else [])
-
-# ---------- Upload ----------
 
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
@@ -527,10 +479,8 @@ def create_storage_day():
 def list_media():
     campaign_id = request.args.get("campaign_id", "")
     real_sb     = get_sb()
-
     posted_by_day  = {}
-    campaign_days_filter = None  # None = sem filtro, set() = filtrar por estes dias
-
+    campaign_days_filter = None
     if campaign_id:
         campaigns = load_data()
         c = next((x for x in campaigns if x["id"] == campaign_id), None)
@@ -539,14 +489,11 @@ def list_media():
             for day, day_data in c.get("days", {}).items():
                 used = [s.get("media_path","") for s in day_data.get("slots",[]) if s.get("media_path")]
                 posted_by_day[day] = set(used)
-
     total_bytes = 0
     days_result = []
     root_items  = real_sb.storage.from_(BUCKET).list() or []
     day_folders = [item.get("name") for item in root_items if item.get("metadata") is None and item.get("name")]
-
     for day in sorted(day_folders, reverse=True):
-        # Se campanha selecionada, mostrar só os dias dela
         if campaign_days_filter is not None and day not in campaign_days_filter:
             continue
         posted_set = posted_by_day.get(day, set())
@@ -554,7 +501,6 @@ def list_media():
             day_items = real_sb.storage.from_(BUCKET).list(path=day) or []
         except Exception:
             day_items = []
-
         files = []
         for f in sorted(day_items, key=lambda x: x.get("name", "")):
             fname = f.get("name", "")
@@ -571,14 +517,12 @@ def list_media():
                 "url":    real_sb.storage.from_(BUCKET).get_public_url(full_path),
                 "posted": full_path in posted_set,
             })
-
         days_result.append({
             "day":          day,
             "files":        files,
             "total":        len(files),
             "posted_count": len([f for f in files if f["posted"]]),
         })
-
     return jsonify({
         "days":        days_result,
         "total_bytes": total_bytes,
@@ -607,7 +551,6 @@ def validate_token():
 
 @app.route("/api/campaigns/<cid>/days/<day>/slot-configs", methods=["GET"])
 def get_slot_configs(cid, day):
-    """Retorna configuração dos slots com mídia atribuída — sem gerar copy."""
     DAY_TYPES = [
         "image","text","image","poll",
         "image","image","text","image",
@@ -645,10 +588,8 @@ def get_slot_configs(cid, day):
         })
     return jsonify({"ok": True, "configs": configs})
 
-
 @app.route("/api/generate-slot-copy", methods=["POST"])
 def api_generate_slot_copy():
-    """Gera copy para um único slot (visão ou texto, com fallback)."""
     body       = request.json or {}
     persona    = body.get("persona", "")
     xai_key    = body.get("xai_key", "")
@@ -661,13 +602,11 @@ def api_generate_slot_copy():
     if stype in ("image", "video") and media_path:
         msg, vision_err = generate_copy_vision(persona, media_path, xai_key)
         if not msg:
-            # Fallback: gera legenda por texto quando visão falha
             print(f"[Vision] Falhou ({vision_err}), usando fallback texto")
             msg, _ = generate_copy(persona, stype, xai_key)
     else:
         msg, vision_err = generate_copy(persona, stype, xai_key)
     return jsonify({"ok": bool(msg), "msg": msg, "vision_err": vision_err})
-
 
 @app.route("/api/generate-copy", methods=["POST"])
 def api_generate_copy():
@@ -682,12 +621,10 @@ def api_generate_copy():
 
 @app.route("/api/generate-day", methods=["POST"])
 def api_generate_day():
-    """Gera slots para um dia com fotos da galeria + IA em paralelo."""
     body    = request.json or {}
     persona = body.get("persona", "")
     xai_key = body.get("xai_key", "")
     day     = body.get("day", datetime.now().strftime("%Y-%m-%d"))
-
     DAY_TYPES = [
         "image","text","image","poll",
         "image","image","text","image",
@@ -696,8 +633,6 @@ def api_generate_day():
         "image","poll","image","image",
         "text","image","image","text",
     ]
-
-    # Busca fotos do dia na galeria
     sb = get_sb()
     try:
         day_files = sb.storage.from_(BUCKET).list(path=day) or []
@@ -708,8 +643,6 @@ def api_generate_day():
         key=lambda f: f.get("name", "")
     )
     photo_idx = 0
-
-    # Monta configuração de cada slot (sem chamar Grok ainda)
     slot_configs = []
     for hour, stype in enumerate(DAY_TYPES):
         media_path = ""
@@ -756,7 +689,6 @@ def api_generate_day():
         }
         for cfg in slot_configs
     ]
-
     return jsonify({"ok": True, "slots": slots, "day": day})
 
 @app.route("/")
