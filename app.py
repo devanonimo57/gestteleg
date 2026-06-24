@@ -1,6 +1,7 @@
-import os, uuid, time, requests
+import os, uuid, time, requests, json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from apscheduler.schedulers.background import BackgroundScheduler
 from supabase import create_client
 
@@ -50,9 +51,9 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
 
     type_hints = {
         "image":    "uma legenda curta para a foto",
-        "reaction": "uma mensagem curta que gere reação e engajamento",
+        "reaction": "uma mensagem curta e provocativa",
         "poll":     "uma enquete com pergunta na primeira linha e 3 opções nas linhas seguintes",
-        "text":     "uma mensagem de texto curta",
+        "text":     "uma mensagem curta e provocativa",
         "video":    "uma legenda curta para o vídeo",
     }
     hint = type_hints.get(post_type, "uma mensagem curta")
@@ -568,19 +569,19 @@ def api_generate_copy():
 
 @app.route("/api/generate-day", methods=["POST"])
 def api_generate_day():
-    """Gera slots para um dia específico com fotos da galeria + IA."""
+    """Gera slots em streaming SSE — cada slot é enviado assim que o Grok termina."""
     body    = request.json or {}
     persona = body.get("persona", "")
     xai_key = body.get("xai_key", "")
     day     = body.get("day", datetime.now().strftime("%Y-%m-%d"))
 
     DAY_TYPES = [
-        "image","reaction","image","poll",
-        "image","image","reaction","image",
-        "image","poll","image","reaction",
-        "image","image","reaction","image",
+        "image","text","image","poll",
+        "image","image","text","image",
+        "image","poll","image","text",
+        "image","image","text","image",
         "image","poll","image","image",
-        "reaction","image","image","reaction",
+        "text","image","image","text",
     ]
 
     # Busca fotos do dia na galeria
@@ -595,43 +596,61 @@ def api_generate_day():
     )
     photo_idx = 0
 
-    slots = []
-    used_texts = []  # anti-repetição: acumula textos gerados no dia
+    # Monta configuração de cada slot (sem chamar Grok ainda)
+    slot_configs = []
     for hour, stype in enumerate(DAY_TYPES):
-        msg = ""
         media_path = ""
         media_name = ""
-
-        if stype in ("image", "video"):
-            if photo_idx < len(photos):
-                fname      = photos[photo_idx]["name"]
-                full_path  = f"{day}/{fname}"
-                media_path = sb.storage.from_(BUCKET).get_public_url(full_path)
-                media_name = fname
-                photo_idx += 1
-            if xai_key and persona:
-                if media_path:
-                    # Grok vê a imagem e gera copy baseada no que está na foto
-                    msg, _ = generate_copy_vision(persona, media_path, xai_key, used_texts)
-                else:
-                    msg, _ = generate_copy(persona, stype, xai_key, used_texts)
-        else:
-            if xai_key and persona:
-                msg, _ = generate_copy(persona, stype, xai_key, used_texts)
-
-        if msg:
-            used_texts.append(msg)
-
-        slots.append({
+        if stype in ("image", "video") and photo_idx < len(photos):
+            fname      = photos[photo_idx]["name"]
+            full_path  = f"{day}/{fname}"
+            media_path = sb.storage.from_(BUCKET).get_public_url(full_path)
+            media_name = fname
+            photo_idx += 1
+        slot_configs.append({
             "id":         str(uuid.uuid4()),
-            "time":       f"{hour:02d}:00",
+            "hour":       hour,
             "type":       stype,
-            "msg":        msg,
             "media_path": media_path,
             "media_name": media_name,
         })
 
-    return jsonify({"ok": True, "slots": slots, "day": day})
+    total = len(slot_configs)
+
+    def generate_for_slot(cfg):
+        if not (xai_key and persona):
+            return cfg, ""
+        stype = cfg["type"]
+        if stype in ("image", "video") and cfg["media_path"]:
+            msg, _ = generate_copy_vision(persona, cfg["media_path"], xai_key)
+        else:
+            msg, _ = generate_copy(persona, stype, xai_key)
+        return cfg, msg
+
+    def stream():
+        completed = 0
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_to_cfg = {executor.submit(generate_for_slot, cfg): cfg for cfg in slot_configs}
+            for future in as_completed(future_to_cfg):
+                cfg, msg = future.result()
+                completed += 1
+                slot = {
+                    "id":         cfg["id"],
+                    "time":       f"{cfg['hour']:02d}:00",
+                    "type":       cfg["type"],
+                    "msg":        msg,
+                    "media_path": cfg["media_path"],
+                    "media_name": cfg["media_name"],
+                    "_progress":  {"done": completed, "total": total},
+                }
+                yield f"data: {json.dumps(slot, ensure_ascii=False)}\n\n"
+        yield 'data: {"_done":true}\n\n'
+
+    return Response(
+        stream_with_context(stream()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 @app.route("/")
 def index():
