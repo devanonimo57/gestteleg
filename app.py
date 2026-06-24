@@ -186,19 +186,34 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
 
 # ---------- Telegram ----------
 
-def send_text(token, chat_id, text):
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": text}, timeout=20)
+def _build_markup(cta_label, cta_url):
+    if not cta_url:
+        return None
+    label = cta_label or "🔞 ACESSAR GRUPO VIP"
+    return {"inline_keyboard": [[{"text": label, "url": cta_url}]]}
+
+def send_text(token, chat_id, text, cta_label="", cta_url=""):
+    payload = {"chat_id": chat_id, "text": text}
+    markup = _build_markup(cta_label, cta_url)
+    if markup:
+        payload["reply_markup"] = markup
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
     return r.json()
 
-def send_photo(token, chat_id, url, caption=""):
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
-        json={"chat_id": chat_id, "photo": url, "caption": caption}, timeout=30)
+def send_photo(token, chat_id, url, caption="", cta_label="", cta_url=""):
+    payload = {"chat_id": chat_id, "photo": url, "caption": caption}
+    markup = _build_markup(cta_label, cta_url)
+    if markup:
+        payload["reply_markup"] = markup
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto", json=payload, timeout=30)
     return r.json()
 
-def send_video(token, chat_id, url, caption=""):
-    r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo",
-        json={"chat_id": chat_id, "video": url, "caption": caption}, timeout=60)
+def send_video(token, chat_id, url, caption="", cta_label="", cta_url=""):
+    payload = {"chat_id": chat_id, "video": url, "caption": caption}
+    markup = _build_markup(cta_label, cta_url)
+    if markup:
+        payload["reply_markup"] = markup
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo", json=payload, timeout=60)
     return r.json()
 
 def send_poll(token, chat_id, question, options):
@@ -228,17 +243,19 @@ def execute_schedule(campaign_id, hour, minute):
     _run_slot(campaign, slot, today)
 
 def _run_slot(campaign, slot, day):
-    token   = campaign["token"]
-    chat_id = campaign["chat"]
-    stype   = slot.get("type", "text")
-    msg     = slot.get("msg", "").strip()
-    media   = slot.get("media_path", "").strip()
+    token     = campaign["token"]
+    chat_id   = campaign["chat"]
+    stype     = slot.get("type", "text")
+    msg       = slot.get("msg", "").strip()
+    media     = slot.get("media_path", "").strip()
+    cta_label = campaign.get("cta_label", "")
+    cta_url   = campaign.get("cta_url", "")
 
     print(f"[SEND] {stype} | {day} {slot.get('time')} | campaign={campaign['id'][:8]}")
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            result = _dispatch(token, chat_id, stype, media, msg)
+            result = _dispatch(token, chat_id, stype, media, msg, cta_label, cta_url)
             ok     = result.get("ok", False)
             detail = result.get("description", "Enviado" if ok else "Erro")
             log_entry(campaign["id"], slot["id"], ok, detail, attempt)
@@ -250,21 +267,21 @@ def _run_slot(campaign, slot, day):
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_DELAYS[attempt - 1])
 
-def _dispatch(token, chat_id, stype, media, msg):
+def _dispatch(token, chat_id, stype, media, msg, cta_label="", cta_url=""):
     if stype in ("image", "video"):
         if not media:
             return {"ok": False, "description": "Sem mídia configurada"}
         if stype == "image":
-            return send_photo(token, chat_id, media, msg)
+            return send_photo(token, chat_id, media, msg, cta_label, cta_url)
         else:
-            return send_video(token, chat_id, media, msg)
+            return send_video(token, chat_id, media, msg, cta_label, cta_url)
     elif stype == "poll":
         lines    = [l.strip() for l in msg.split("\n") if l.strip()]
         question = lines[0] if lines else "O que você acha?"
         options  = lines[1:5] if len(lines) > 1 else ["Sim", "Não"]
         return send_poll(token, chat_id, question, options)
     else:
-        return send_text(token, chat_id, msg or ".")
+        return send_text(token, chat_id, msg or ".", cta_label, cta_url)
 
 def log_entry(campaign_id, slot_id, success, detail, attempt=1):
     campaigns = load_data()
