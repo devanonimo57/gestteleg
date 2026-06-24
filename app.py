@@ -345,6 +345,31 @@ def upload_file():
     public_url = sb.storage.from_(BUCKET).get_public_url(name)
     return jsonify({"path": public_url, "name": f.filename})
 
+@app.route("/api/media", methods=["GET"])
+def list_media():
+    sb = get_sb()
+    files = sb.storage.from_(BUCKET).list() or []
+    result = []
+    total_bytes = 0
+    for f in files:
+        name = f.get("name", "")
+        if not name or name.startswith("."):
+            continue
+        meta = f.get("metadata") or {}
+        size = meta.get("size") or 0
+        total_bytes += size
+        result.append({
+            "name": name,
+            "size": size,
+            "url":  sb.storage.from_(BUCKET).get_public_url(name),
+        })
+    return jsonify({"files": result, "total_bytes": total_bytes, "limit_bytes": 1_073_741_824})
+
+@app.route("/api/media/<name>", methods=["DELETE"])
+def delete_media(name):
+    get_sb().storage.from_(BUCKET).remove([name])
+    return jsonify({"ok": True})
+
 @app.route("/api/validate-token", methods=["POST"])
 def validate_token():
     token = request.json.get("token", "")
