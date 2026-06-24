@@ -186,31 +186,34 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
 
 # ---------- Telegram ----------
 
-def _build_markup(cta_label, cta_url):
-    if not cta_url:
+def _build_markup(cta_buttons):
+    """cta_buttons: lista de {label, url}. Cada botão vai numa linha separada."""
+    if not cta_buttons:
         return None
-    label = cta_label or "🔞 ACESSAR GRUPO VIP"
-    return {"inline_keyboard": [[{"text": label, "url": cta_url}]]}
+    rows = [[{"text": b["label"], "url": b["url"]}] for b in cta_buttons if b.get("url")]
+    if not rows:
+        return None
+    return {"inline_keyboard": rows}
 
-def send_text(token, chat_id, text, cta_label="", cta_url=""):
+def send_text(token, chat_id, text, cta_buttons=None):
     payload = {"chat_id": chat_id, "text": text}
-    markup = _build_markup(cta_label, cta_url)
+    markup = _build_markup(cta_buttons or [])
     if markup:
         payload["reply_markup"] = markup
     r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload, timeout=20)
     return r.json()
 
-def send_photo(token, chat_id, url, caption="", cta_label="", cta_url=""):
+def send_photo(token, chat_id, url, caption="", cta_buttons=None):
     payload = {"chat_id": chat_id, "photo": url, "caption": caption}
-    markup = _build_markup(cta_label, cta_url)
+    markup = _build_markup(cta_buttons or [])
     if markup:
         payload["reply_markup"] = markup
     r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto", json=payload, timeout=30)
     return r.json()
 
-def send_video(token, chat_id, url, caption="", cta_label="", cta_url=""):
+def send_video(token, chat_id, url, caption="", cta_buttons=None):
     payload = {"chat_id": chat_id, "video": url, "caption": caption}
-    markup = _build_markup(cta_label, cta_url)
+    markup = _build_markup(cta_buttons or [])
     if markup:
         payload["reply_markup"] = markup
     r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo", json=payload, timeout=60)
@@ -248,14 +251,13 @@ def _run_slot(campaign, slot, day):
     stype     = slot.get("type", "text")
     msg       = slot.get("msg", "").strip()
     media     = slot.get("media_path", "").strip()
-    cta_label = campaign.get("cta_label", "")
-    cta_url   = campaign.get("cta_url", "")
+    cta_buttons = campaign.get("cta_buttons", [])
 
     print(f"[SEND] {stype} | {day} {slot.get('time')} | campaign={campaign['id'][:8]}")
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            result = _dispatch(token, chat_id, stype, media, msg, cta_label, cta_url)
+            result = _dispatch(token, chat_id, stype, media, msg, cta_buttons)
             ok     = result.get("ok", False)
             detail = result.get("description", "Enviado" if ok else "Erro")
             log_entry(campaign["id"], slot["id"], ok, detail, attempt)
@@ -267,21 +269,21 @@ def _run_slot(campaign, slot, day):
         if attempt < MAX_RETRIES:
             time.sleep(RETRY_DELAYS[attempt - 1])
 
-def _dispatch(token, chat_id, stype, media, msg, cta_label="", cta_url=""):
+def _dispatch(token, chat_id, stype, media, msg, cta_buttons=None):
     if stype in ("image", "video"):
         if not media:
             return {"ok": False, "description": "Sem mídia configurada"}
         if stype == "image":
-            return send_photo(token, chat_id, media, msg, cta_label, cta_url)
+            return send_photo(token, chat_id, media, msg, cta_buttons)
         else:
-            return send_video(token, chat_id, media, msg, cta_label, cta_url)
+            return send_video(token, chat_id, media, msg, cta_buttons)
     elif stype == "poll":
         lines    = [l.strip() for l in msg.split("\n") if l.strip()]
         question = lines[0] if lines else "O que você acha?"
         options  = lines[1:5] if len(lines) > 1 else ["Sim", "Não"]
         return send_poll(token, chat_id, question, options)
     else:
-        return send_text(token, chat_id, msg or ".", cta_label, cta_url)
+        return send_text(token, chat_id, msg or ".", cta_buttons)
 
 def log_entry(campaign_id, slot_id, success, detail, attempt=1):
     campaigns = load_data()
