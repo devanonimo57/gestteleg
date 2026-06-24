@@ -628,7 +628,7 @@ def api_generate_day():
         return cfg, msg
 
     results = {}
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(generate_for_slot, cfg): cfg for cfg in slot_configs}
         for future in as_completed(futures):
             cfg, msg = future.result()
