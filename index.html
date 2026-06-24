@@ -787,16 +787,12 @@ svg.ico{display:block;flex-shrink:0}
       </div>
 
       <div class="card" style="padding:24px;margin-top:16px">
-        <div class="section-title" style="margin-bottom:16px">Botão CTA (Call to Action)</div>
-        <p style="font-size:13px;color:var(--muted-fg);margin-bottom:16px">Botão que aparece abaixo de cada post enviado. Deixe a URL em branco para não usar.</p>
-        <div class="field-group" style="margin-bottom:12px">
-          <div class="field-row"><label class="field-label">Texto do botão</label></div>
-          <input id="fCtaLabel" class="input-base" placeholder="🔞 ACESSAR GRUPO VIP"/>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-title" style="margin-bottom:0">Botões CTA</div>
+          <button class="btn-sm" onclick="addCtaRow()" type="button">+ Adicionar botão</button>
         </div>
-        <div class="field-group">
-          <div class="field-row"><label class="field-label">URL de destino</label></div>
-          <input id="fCtaUrl" class="input-base" placeholder="https://t.me/seubot"/>
-        </div>
+        <p style="font-size:13px;color:var(--muted-fg);margin-bottom:16px">Aparecem abaixo de cada post. Você pode ter vários (ex: planos diferentes).</p>
+        <div id="ctaRows"></div>
       </div>
 
       <div class="card" id="logsSection" style="padding:24px;display:none">
@@ -1192,7 +1188,8 @@ function showList(){
 function showNew(){
   editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
-  ['fName','fDesc','fToken','fChat','fPersona','fCtaLabel','fCtaUrl'].forEach(id=>document.getElementById(id).value='');
+  ['fName','fDesc','fToken','fChat','fPersona'].forEach(id=>document.getElementById(id).value='');
+  loadCtaButtons([]);
   document.getElementById('editorTitle').textContent='Nova Campanha';
   document.getElementById('editorMeta').textContent='';
   document.getElementById('editorStatusBadge').style.display='none';
@@ -1220,8 +1217,7 @@ function showEdit(id){
   document.getElementById('fToken').value=c.token||'';
   document.getElementById('fChat').value=c.chat||'';
   document.getElementById('fPersona').value=c.persona||'';
-  document.getElementById('fCtaLabel').value=c.cta_label||'';
-  document.getElementById('fCtaUrl').value=c.cta_url||'';
+  loadCtaButtons(c.cta_buttons||[]);
 
   document.getElementById('editorTitle').textContent=c.name||'Campanha';
   const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
@@ -1710,6 +1706,40 @@ function addSchedule(){
   renderSchedules();closeModal();showToast('Horário adicionado!','success');
 }
 
+// ─── CTA BUTTONS ───
+let ctaButtons=[];
+
+function renderCtaRows(){
+  const el=document.getElementById('ctaRows');
+  if(!el) return;
+  if(!ctaButtons.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--muted-fg);padding:8px 0">Nenhum botão. Clique em "+ Adicionar botão".</div>';
+    return;
+  }
+  el.innerHTML=ctaButtons.map((b,i)=>`
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+      <input class="input-base" style="flex:1" placeholder="Texto do botão (ex: VIP 30 dias — R$34,97)" value="${esc(b.label)}" oninput="ctaButtons[${i}].label=this.value"/>
+      <input class="input-base" style="flex:1.5" placeholder="https://t.me/seubot?start=plano30" value="${esc(b.url)}" oninput="ctaButtons[${i}].url=this.value"/>
+      <button class="icon-btn danger" onclick="removeCtaRow(${i})" title="Remover">✕</button>
+    </div>
+  `).join('');
+}
+
+function addCtaRow(){
+  ctaButtons.push({label:'',url:''});
+  renderCtaRows();
+}
+
+function removeCtaRow(i){
+  ctaButtons.splice(i,1);
+  renderCtaRows();
+}
+
+function loadCtaButtons(buttons){
+  ctaButtons=Array.isArray(buttons)&&buttons.length ? buttons.map(b=>({label:b.label||'',url:b.url||''})) : [];
+  renderCtaRows();
+}
+
 // ─── SAVE ───
 async function saveCamp(){
   const name=document.getElementById('fName').value.trim();
@@ -1724,8 +1754,7 @@ async function saveCamp(){
   }
   const body={
     name,token,chat,
-    cta_label: document.getElementById('fCtaLabel').value.trim(),
-    cta_url:   document.getElementById('fCtaUrl').value.trim(),
+    cta_buttons: ctaButtons.filter(b=>b.url.trim()),
     desc:document.getElementById('fDesc').value.trim(),
     persona:document.getElementById('fPersona').value.trim(),
     active:isActive,
