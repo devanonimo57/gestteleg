@@ -780,6 +780,11 @@ svg.ico{display:block;flex-shrink:0}
           <input id="fChat" class="input-base input-mono" placeholder="-100..."/>
         </div>
         <!-- Chave Grok removida — usar a chave global da tela de campanhas -->
+        <div class="field-group" style="margin-top:12px;margin-bottom:0">
+          <div class="field-row"><label class="field-label">URL do botão CTA</label></div>
+          <input id="fCtaUrl" class="input-base" placeholder="https://t.me/... (deixe vazio para não usar)"/>
+          <div class="field-hint" style="margin-top:4px">Botão que aparece em todos os posts. O texto é gerado pela IA para cada post.</div>
+        </div>
       </div>
 
       <div class="card" id="logsSection" style="padding:24px;display:none">
@@ -810,17 +815,8 @@ svg.ico{display:block;flex-shrink:0}
       <div class="gen-progress" id="genProgress"><div class="gen-bar" id="genBar" style="width:0%"></div></div>
       <div class="sched-scroll" id="schedList"></div>
 
-      <!-- CTA do dia -->
-      <div id="ctaSection" style="display:none;padding:12px 16px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:8px">🔗 Botão CTA do dia</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="ctaLabel" class="input-base" placeholder="Texto do botão (ex: 🔞 Entrar no grupo)" style="flex:1;min-width:150px;font-size:12px" oninput="saveCTAToDay()"/>
-          <input id="ctaUrl" class="input-base" placeholder="URL (https://t.me/...)" style="flex:1;min-width:150px;font-size:12px" oninput="saveCTAToDay()"/>
-        </div>
-        <div style="font-size:11px;color:var(--muted-fg);margin-top:6px">Aparece em todos os posts do dia (exceto enquetes). Deixe vazio para não usar.</div>
-      </div>
 
-      <div class="sched-footer">
+<div class="sched-footer">
         <button class="sched-add-btn" onclick="openModal()">
           <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar horário
@@ -1186,10 +1182,7 @@ function showList(){
 function showNew(){
   editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
-  ['fName','fDesc','fToken','fChat','fPersona'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('ctaLabel').value='';
-  document.getElementById('ctaUrl').value='';
-  document.getElementById('ctaSection').style.display='none';
+  ['fName','fDesc','fToken','fChat','fPersona','fCtaUrl'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('editorTitle').textContent='Nova Campanha';
   document.getElementById('editorMeta').textContent='';
   document.getElementById('editorStatusBadge').style.display='none';
@@ -1214,15 +1207,13 @@ function showEdit(id){
   if(firstDay){
     selectedDay=firstDay;
     schedules=(campaignDays[firstDay].slots||[]).map((s,i)=>({...s,_idx:i}));
-    loadCTAFromDay(firstDay);
-  } else {
-    document.getElementById('ctaSection').style.display='none';
   }
   document.getElementById('fName').value=c.name||'';
   document.getElementById('fDesc').value=c.desc||'';
   document.getElementById('fToken').value=c.token||'';
   document.getElementById('fChat').value=c.chat||'';
   document.getElementById('fPersona').value=c.persona||'';
+  document.getElementById('fCtaUrl').value=c.cta_url||'';
 
   document.getElementById('editorTitle').textContent=c.name||'Campanha';
   const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
@@ -1365,6 +1356,11 @@ function renderSchedules(){
             <textarea class="slot-msg" id="smsg_${s._idx}" placeholder="${s.type==='poll'?'Pergunta (1ª linha) + opções (próximas linhas)':'Mensagem / legenda…'}" oninput="slotMsgChange(${s._idx},this.value)">${esc(s.msg||'')}</textarea>
             <button class="slot-ai-btn" onclick="generateCopyInline(${s._idx})" title="Gerar com IA">✨ IA</button>
           </div>
+          ${(()=>{const url=getCampaignCtaUrl();return url&&s.type!=='poll'?`
+          <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+            <span style="font-size:11px;color:var(--muted-fg);white-space:nowrap;min-width:48px">🔗 CTA:</span>
+            <input class="input-base" id="scta_${s._idx}" style="font-size:11px;flex:1" value="${esc(s.cta_label||'')}" placeholder="Gerado pela IA…" oninput="slotCtaChange(${s._idx},this.value)"/>
+          </div>`:'';})()}
         </div>
       </div>
     </div>`;
@@ -1392,6 +1388,9 @@ function toggleExpand(idx){
 
 function slotMsgChange(idx,val){
   if(schedules[idx]) schedules[idx].msg=val;
+}
+function slotCtaChange(idx,val){
+  if(schedules[idx]) schedules[idx].cta_label=val;
 }
 
 async function slotUpload(e,idx){
@@ -1451,17 +1450,17 @@ async function generateCopyInline(idx){
   if(btnExpand){btnExpand.disabled=true;btnExpand.textContent='⏳';}
   // Usa visão se o slot tem imagem/vídeo com media_path
   const useVision=(s.type==='image'||s.type==='video')&&s.media_path;
-  let msg='';
+  let msg='', ctaLabel='';
   if(useVision){
     const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:s.media_path});
-    msg=r.msg||'';
+    msg=r.msg||''; ctaLabel=r.cta_label||'';
     if(!msg) showToast(`Erro Vision: ${r.vision_err||'falhou'}`,'error');
   } else {
-    const r=await api('POST','/generate-copy',{persona,type:s.type,xai_key:xai});
-    msg=r.copy||'';
-    if(!msg) showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:''});
+    msg=r.msg||''; ctaLabel=r.cta_label||'';
+    if(!msg) showToast(`Erro Grok: ${r.vision_err||r.error||'falhou'}`,'error');
   }
-  if(msg){schedules[idx].msg=msg;renderSchedules();showToast('Copy gerada!','success');}
+  if(msg){schedules[idx].msg=msg;schedules[idx].cta_label=ctaLabel;renderSchedules();showToast('Copy gerada!','success');}
   if(btnRow){btnRow.disabled=false;btnRow.textContent='✨';}
   if(btnExpand){btnExpand.disabled=false;btnExpand.textContent='✨ IA';}
 }
@@ -1512,12 +1511,12 @@ async function generateDay(){
       btn.textContent=`⏳ ${i+1} / ${total}`;
       bar.style.width=Math.round((i+1)/total*100)+'%';
 
-      let msg='';
+      let msg='', ctaLabel='';
       if(xai&&persona){
         const r=await api('POST','/generate-slot-copy',{
           persona,xai_key:xai,type:cfg.type,media_path:cfg.media_path
         });
-        msg=r.msg||'';
+        msg=r.msg||''; ctaLabel=r.cta_label||'';
       }
 
       const slot={
@@ -1525,6 +1524,7 @@ async function generateDay(){
         time:`${String(cfg.hour).padStart(2,'0')}:00`,
         type:cfg.type,
         msg,
+        cta_label:ctaLabel,
         media_path:cfg.media_path,
         media_name:cfg.media_name,
         _idx:i,
@@ -1537,8 +1537,7 @@ async function generateDay(){
     // 3. Salva tudo no servidor
     await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{
       slots:schedules,
-      cta_label:campaignDays[selectedDay]?.cta_label||'',
-      cta_url:campaignDays[selectedDay]?.cta_url||''
+      cta_label:campaignDays[selectedDay]?.cta_label||''
     });
     buildDayNav();
     showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
@@ -1595,29 +1594,17 @@ function buildDayNav(){
   }
 }
 
-function saveCTAToDay(){
-  if(!selectedDay||!campaignDays[selectedDay]) return;
-  campaignDays[selectedDay].cta_label=document.getElementById('ctaLabel').value;
-  campaignDays[selectedDay].cta_url=document.getElementById('ctaUrl').value;
-}
-
-function loadCTAFromDay(iso){
-  const d=campaignDays[iso]||{};
-  document.getElementById('ctaLabel').value=d.cta_label||'';
-  document.getElementById('ctaUrl').value=d.cta_url||'';
-  document.getElementById('ctaSection').style.display=iso?'block':'none';
+function getCampaignCtaUrl(){
+  return document.getElementById('fCtaUrl').value.trim();
 }
 
 function selectDay(iso){
-  // Salva slots e CTA do dia atual antes de trocar
   if(selectedDay && campaignDays[selectedDay]){
     campaignDays[selectedDay].slots=[...schedules];
-    saveCTAToDay();
   }
   selectedDay=iso;
   schedules=(campaignDays[iso]?.slots||[]).map((s,i)=>({...s,_idx:i}));
   expandedSlots=new Set();
-  loadCTAFromDay(iso);
   buildDayNav();
   renderSchedules();
 }
@@ -1720,14 +1707,22 @@ async function handleUpload(e){
   showToast('Arquivo enviado!','success');
 }
 
-function addSchedule(){
+async function addSchedule(){
   const time=document.getElementById('mTime').value;
   const type=document.getElementById('mType').value;
   const msg=document.getElementById('mMsg').value.trim();
   if(!time){showToast('Informe um horário','error');return;}
   const idx=schedules.length;
-  schedules.push({id:crypto.randomUUID(),time,type,msg,media_path:pendingPath,media_name:pendingName,_idx:idx});
+  const slot={id:crypto.randomUUID(),time,type,msg,cta_label:'',media_path:pendingPath,media_name:pendingName,_idx:idx};
+  schedules.push(slot);
   renderSchedules();closeModal();showToast('Horário adicionado!','success');
+  // Gera CTA se houver URL configurada e mensagem
+  const xai=localStorage.getItem('global_xai')||'';
+  const persona=document.getElementById('fPersona').value.trim();
+  if(getCampaignCtaUrl() && msg && xai && type!=='poll'){
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type,media_path:slot.media_path||''});
+    if(r.cta_label){schedules[idx].cta_label=r.cta_label;renderSchedules();}
+  }
 }
 
 // ─── SAVE ───
@@ -1741,13 +1736,12 @@ async function saveCamp(){
   // Salva slots e CTA do dia atual em memória antes de enviar
   if(selectedDay && campaignDays[selectedDay]){
     campaignDays[selectedDay].slots=schedules.map(s=>{const c={...s};delete c._idx;return c;});
-    campaignDays[selectedDay].cta_label=document.getElementById('ctaLabel').value;
-    campaignDays[selectedDay].cta_url=document.getElementById('ctaUrl').value;
   }
   const body={
     name,token,chat,
     desc:document.getElementById('fDesc').value.trim(),
     persona:document.getElementById('fPersona').value.trim(),
+    cta_url:document.getElementById('fCtaUrl').value.trim(),
     xai_key:localStorage.getItem('global_xai')||'',
     active:isActive,
     days:campaignDays,
