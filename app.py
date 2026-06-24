@@ -114,54 +114,80 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
         print(f"[Vision] Erro ao baixar imagem: {e}")
         return "", f"Erro ao baixar imagem: {e}"
 
-    # Prompt de visão: foco total no que está na foto, sem persona
-    # A persona fica só para posts de texto — aqui o Grok precisa descrever o que vê
-    system = """Você escreve legendas explícitas e provocantes para fotos de modelos adultas no Telegram.
-Olhe a foto com atenção e identifique: pose, expressão facial, partes do corpo visíveis, cenário, ângulo, roupa ou ausência.
-Escreva uma legenda curta (2-3 frases) na primeira pessoa descrevendo EXATAMENTE o que está acontecendo na foto.
-Seja direta, sensual e explícita. Mencione o que você vê: boca, língua, peitos, pose, espelho, cama — o que estiver na imagem.
-Escreva APENAS o texto do post, sem explicações, sem aspas."""
-
+    # PASSO 1: Vision descreve a imagem de forma objetiva
     try:
-        r = requests.post(
+        r1 = requests.post(
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
                 "model": "grok-2-vision-1212",
                 "messages": [
-                    {"role": "system", "content": system},
                     {
                         "role": "user",
                         "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": img_data_url},
-                            },
-                            {
-                                "type": "text",
-                                "text": "Descreve exatamente o que você vê nessa foto e escreve a legenda.",
-                            },
+                            {"type": "image_url", "image_url": {"url": img_data_url}},
+                            {"type": "text", "text": (
+                                "Descreva objetivamente o que você vê nessa foto: "
+                                "quais partes do corpo estão visíveis, qual é a pose, "
+                                "qual é a expressão facial, qual é o cenário, "
+                                "tem roupa ou não. Seja específico e detalhado."
+                            )},
                         ],
-                    },
+                    }
+                ],
+                "max_tokens": 200,
+                "temperature": 0.3,
+            },
+            timeout=40,
+        )
+        data1 = r1.json() if r1.ok else {}
+        description = data1.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        if not description:
+            print(f"[Vision] Passo 1 falhou: {r1.text[:200]}")
+            description = "foto sensual de uma modelo"
+    except Exception as e:
+        print(f"[Vision] Passo 1 exception: {e}")
+        description = "foto sensual de uma modelo"
+
+    # PASSO 2: Grok-3 gera a legenda explícita com base na descrição + persona
+    historico = ""
+    if used_texts:
+        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
+        historico = f"\n\nTextos já usados hoje (NÃO repita ideias):\n{lista}"
+
+    system2 = f"""{persona}
+Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{historico}"""
+
+    prompt2 = (
+        f"A foto mostra: {description}\n\n"
+        "Com base nessa foto, escreva uma legenda curta (2-3 frases) e explícita na primeira pessoa, "
+        "mencionando especificamente o que aparece na imagem. Seja provocante e direta."
+    )
+
+    try:
+        r2 = requests.post(
+            "https://api.x.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
+            json={
+                "model": "grok-3",
+                "messages": [
+                    {"role": "system", "content": system2},
+                    {"role": "user",   "content": prompt2},
                 ],
                 "max_tokens": 250,
                 "temperature": 0.95,
             },
-            timeout=40,
+            timeout=30,
         )
-        try:
-            data = r.json()
-        except ValueError:
-            data = {"error": r.text[:300]}
-        if not r.ok:
-            err = data.get("error", data)
-            if isinstance(err, dict):
-                err = err.get("message") or err.get("error") or str(err)
-            print(f"[Vision] Erro {r.status_code}: {err}")
-            return "", f"xAI Vision HTTP {r.status_code}: {err}"
-        return data["choices"][0]["message"]["content"].strip(), ""
+        data2 = r2.json() if r2.ok else {}
+        msg = data2.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        if not msg:
+            err = data2.get("error", r2.text[:200])
+            print(f"[Vision] Passo 2 falhou: {err}")
+            return "", str(err)
+        return msg, ""
     except Exception as e:
-        print(f"[Vision] Exception: {e}")
+        print(f"[Vision] Passo 2 exception: {e}")
         return "", str(e)
 
 # ---------- Telegram ----------
