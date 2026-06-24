@@ -1,4 +1,4 @@
-import os, uuid, time, requests
+import os, uuid, time, requests, base64
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
@@ -99,9 +99,20 @@ Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4).{
 
 
 def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
-    """Analisa a imagem visualmente e gera copy com base no que a Grok vê."""
+    """Baixa a imagem, converte para base64 e envia ao Grok Vision."""
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
+
+    # Baixa a imagem e converte para base64 (evita problemas de acesso de URL)
+    try:
+        img_resp = requests.get(image_url, timeout=15)
+        img_resp.raise_for_status()
+        content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0]
+        img_b64 = base64.b64encode(img_resp.content).decode("utf-8")
+        img_data_url = f"data:{content_type};base64,{img_b64}"
+    except Exception as e:
+        print(f"[Vision] Erro ao baixar imagem: {e}")
+        return "", f"Erro ao baixar imagem: {e}"
 
     historico = ""
     if used_texts:
@@ -109,9 +120,10 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
         historico = f"\n\nTextos já usados hoje (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
 
     system = f"""{persona}
-Você receberá uma foto. Descreva o que está acontecendo na imagem de forma sensual e explícita, \
-criando uma legenda curta que faça o seguidor imaginar a cena com detalhes. \
-Escreva na primeira pessoa, como se fosse a modelo falando. \
+Você receberá uma foto. Observe TODOS os detalhes visuais: pose, expressão, partes do corpo visíveis, \
+cenário, roupa ou ausência dela, ângulo. Crie uma legenda curta e explícita que descreva exatamente \
+o que está acontecendo na foto, de forma sensual e provocante. \
+Escreva na primeira pessoa, como se fosse a modelo falando sobre aquela cena específica. \
 Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{historico}"""
 
     try:
@@ -127,19 +139,19 @@ Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{
                         "content": [
                             {
                                 "type": "image_url",
-                                "image_url": {"url": image_url, "detail": "high"},
+                                "image_url": {"url": img_data_url},
                             },
                             {
                                 "type": "text",
-                                "text": "Olha essa foto e escreve a legenda. Gancho diferente de tudo que já foi postado hoje.",
+                                "text": "Descreve o que está acontecendo NESSA foto e escreve a legenda baseada no que você vê.",
                             },
                         ],
                     },
                 ],
-                "max_tokens": 200,
+                "max_tokens": 250,
                 "temperature": 0.95,
             },
-            timeout=30,
+            timeout=40,
         )
         try:
             data = r.json()
