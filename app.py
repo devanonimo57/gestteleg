@@ -627,30 +627,26 @@ def api_generate_day():
             msg, _ = generate_copy(persona, stype, xai_key)
         return cfg, msg
 
-    def stream():
-        completed = 0
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            future_to_cfg = {executor.submit(generate_for_slot, cfg): cfg for cfg in slot_configs}
-            for future in as_completed(future_to_cfg):
-                cfg, msg = future.result()
-                completed += 1
-                slot = {
-                    "id":         cfg["id"],
-                    "time":       f"{cfg['hour']:02d}:00",
-                    "type":       cfg["type"],
-                    "msg":        msg,
-                    "media_path": cfg["media_path"],
-                    "media_name": cfg["media_name"],
-                    "_progress":  {"done": completed, "total": total},
-                }
-                yield f"data: {json.dumps(slot, ensure_ascii=False)}\n\n"
-        yield 'data: {"_done":true}\n\n'
+    results = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(generate_for_slot, cfg): cfg for cfg in slot_configs}
+        for future in as_completed(futures):
+            cfg, msg = future.result()
+            results[cfg["id"]] = msg
 
-    return Response(
-        stream_with_context(stream()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    slots = [
+        {
+            "id":         cfg["id"],
+            "time":       f"{cfg['hour']:02d}:00",
+            "type":       cfg["type"],
+            "msg":        results.get(cfg["id"], ""),
+            "media_path": cfg["media_path"],
+            "media_name": cfg["media_name"],
+        }
+        for cfg in slot_configs
+    ]
+
+    return jsonify({"ok": True, "slots": slots, "day": day})
 
 @app.route("/")
 def index():
