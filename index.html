@@ -1091,13 +1091,20 @@ function galItemHTML(f,selectable,dayPrefix){
 async function uploadToDay(e,day){
   const files=Array.from(e.target.files);if(!files.length) return;
   showToast(`Enviando ${files.length} foto(s) para ${day}…`,'info');
+  let ok=0,fail=0;
   for(const file of files){
-    const fd=new FormData();
-    fd.append('file',file);
-    fd.append('day',day);
-    await fetch('/api/upload',{method:'POST',body:fd});
+    try{
+      const fd=new FormData();
+      fd.append('file',file);
+      fd.append('day',day);
+      const r=await fetch('/api/upload',{method:'POST',body:fd});
+      if(r.ok) ok++; else fail++;
+    }catch(err){fail++;}
   }
-  await loadMedia();showToast('Upload concluído!','success');e.target.value='';
+  await loadMedia();
+  e.target.value='';
+  if(fail===0) showToast(`✅ ${ok} arquivo(s) enviado(s)!`,'success');
+  else showToast(`⚠️ ${ok} enviado(s), ${fail} falhou`,'error');
 }
 
 async function deleteMedia(path,e){
@@ -1108,9 +1115,12 @@ async function deleteMedia(path,e){
 }
 
 // ─── NEW DAY MODAL ───
+function todayBRT(){
+  return new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+}
+
 function openNewDayModal(){
-  const today=new Date().toISOString().slice(0,10);
-  document.getElementById('newDayInput').value=today;
+  document.getElementById('newDayInput').value=todayBRT();
   document.getElementById('newDayModal').classList.add('open');
 }
 function closeNewDayModal(){document.getElementById('newDayModal').classList.remove('open');}
@@ -1472,9 +1482,14 @@ async function generateCopyModal(){
   if(!persona){showToast('Preencha a persona da campanha','error');return;}
   const btn=document.getElementById('genCopyBtn');
   btn.disabled=true;btn.textContent='⏳';
-  const r=await api('POST','/generate-copy',{persona,type:document.getElementById('mType').value,xai_key:xai});
-  if(r.ok){document.getElementById('mMsg').value=r.copy;showToast('Copy gerada!','success');}
-  else showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+  const type=document.getElementById('mType').value;
+  const r=await api('POST','/generate-slot-copy',{persona,type,xai_key:xai,media_path:pendingPath||''});
+  if(r.ok&&r.msg){
+    document.getElementById('mMsg').value=r.msg;
+    showToast('Copy gerada!','success');
+  } else {
+    showToast(`Erro Grok: ${r.vision_err||r.error||'falhou'}`,'error');
+  }
   btn.disabled=false;btn.textContent='✨ IA';
 }
 
@@ -1621,7 +1636,7 @@ async function addNextDay(){
     d.setDate(d.getDate()+1);
     next=d.toISOString().slice(0,10);
   } else {
-    next=new Date().toISOString().slice(0,10);
+    next=todayBRT();
   }
   if(campaignDays[next]){showToast('Dia já existe','error');return;}
   const r=await api('POST',`/campaigns/${editingId}/days`,{day:next});
@@ -1783,7 +1798,7 @@ function renderCards(){
   }
 
   el.innerHTML=campaigns.map(c=>{
-    const n=c.schedules?.length||0;
+    const n=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
     const d=c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'';
     const statusPill=c.active
       ?`<span class="pill-active"><span class="pill-active-dot"></span>Ativo</span>`
