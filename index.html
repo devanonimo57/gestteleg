@@ -774,17 +774,7 @@ svg.ico{display:block;flex-shrink:0}
           <div class="field-row"><label class="field-label">Chat ID</label></div>
           <input id="fChat" class="input-base input-mono" placeholder="-100..."/>
         </div>
-        <div class="field-group" style="margin-bottom:0">
-          <div class="field-row">
-            <label class="field-label">Chave API Grok / xAI</label>
-            <span class="field-hint" style="font-size:11px">para gerar copys com IA</span>
-          </div>
-          <div class="input-row">
-            <input id="fXai" type="password" class="input-base input-mono" placeholder="xai-..."/>
-            <button class="btn-sm" onclick="validateXai()">Validar</button>
-          </div>
-          <span class="token-hint" id="xaiHint" style="margin-top:5px"></span>
-        </div>
+        <!-- Chave Grok removida — usar a chave global da tela de campanhas -->
       </div>
 
       <div class="card" id="logsSection" style="padding:24px;display:none">
@@ -1181,13 +1171,12 @@ function showList(){
 function showNew(){
   editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
-  ['fName','fDesc','fToken','fChat','fPersona','fXai'].forEach(id=>document.getElementById(id).value='');
+  ['fName','fDesc','fToken','fChat','fPersona'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('editorTitle').textContent='Nova Campanha';
   document.getElementById('editorMeta').textContent='';
   document.getElementById('editorStatusBadge').style.display='none';
   document.getElementById('testBtn').style.display='none';
   document.getElementById('tokenHint').className='field-hint token-hint';
-  document.getElementById('xaiHint').className='token-hint';
   document.getElementById('logsSection').style.display='none';
   applyStatus();renderSchedules();
   document.getElementById('listView').style.display='none';
@@ -1210,7 +1199,7 @@ function showEdit(id){
   document.getElementById('fToken').value=c.token||'';
   document.getElementById('fChat').value=c.chat||'';
   document.getElementById('fPersona').value=c.persona||'';
-  document.getElementById('fXai').value=c.xai_key||'';
+
   document.getElementById('editorTitle').textContent=c.name||'Campanha';
   const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
   document.getElementById('editorMeta').textContent=`${_days.length} dia(s) · ${_slots} horários · Atualizado em ${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}`;
@@ -1218,7 +1207,6 @@ function showEdit(id){
   const th=document.getElementById('tokenHint');
   th.className='field-hint token-hint ok';
   th.innerHTML='<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg> Token salvo';
-  if(c.xai_key){const xh=document.getElementById('xaiHint');xh.className='token-hint ok';xh.textContent='✓ Chave Grok/xAI salva';}
   const badge=document.getElementById('editorStatusBadge');
   badge.style.display='inline-flex';
   badge.className=c.active?'pill-active':'pill-paused';
@@ -1426,7 +1414,7 @@ async function sendNow(schedId,idx){
 }
 
 async function generateCopyInline(idx){
-  const xai=document.getElementById('fXai').value.trim()||localStorage.getItem('global_xai')||'';
+  const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
   if(!xai){showToast('Informe a chave Grok/xAI','error');return;}
   if(!persona){showToast('Preencha a persona da campanha','error');return;}
@@ -1437,7 +1425,7 @@ async function generateCopyInline(idx){
 }
 
 async function generateCopyModal(){
-  const xai=document.getElementById('fXai').value.trim()||localStorage.getItem('global_xai')||'';
+  const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
   if(!xai){showToast('Informe a chave Grok/xAI','error');return;}
   if(!persona){showToast('Preencha a persona da campanha','error');return;}
@@ -1451,7 +1439,7 @@ async function generateCopyModal(){
 
 async function generateDay(){
   if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
-  const xai=document.getElementById('fXai').value.trim()||localStorage.getItem('global_xai')||'';
+  const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
   if(schedules.length>0&&!confirm(`Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`)) return;
   const btn=document.getElementById('genDayBtn');
@@ -1654,7 +1642,7 @@ async function saveCamp(){
     name,token,chat,
     desc:document.getElementById('fDesc').value.trim(),
     persona:document.getElementById('fPersona').value.trim(),
-    xai_key:document.getElementById('fXai').value.trim(),
+    xai_key:localStorage.getItem('global_xai')||'',
     active:isActive,
     days:campaignDays,
   };
