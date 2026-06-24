@@ -130,11 +130,11 @@ def generate_cta_label(msg, stype, xai_key):
         prompt = (
             f"Post de canal adulto no Telegram: \"{msg[:200]}\"\n\n"
             f"Escreva o texto de um botão CTA para esse post. Regras:\n"
-            f"- Máximo 20 caracteres\n"
+            f"- Máximo 22 caracteres\n"
             f"- Explícito, safado, direto\n"
             f"- Contextualizado com o que está no post\n"
-            f"- 1 emoji + texto curtíssimo\n"
-            f"- Exemplos: '🍆 Ver completo', '🔞 Quero mais', '💦 Assiste aqui', '😈 Entra no grupo'\n"
+            f"- OBRIGATÓRIO: emoji no início E no final\n"
+            f"- Exemplos: '🍆 Ver completo 🍆', '🔞 Quero mais 🔥', '💦 Assiste aqui 👅', '😈 Entra no grupo 🔞'\n"
             f"Responda SOMENTE com o texto do botão, sem aspas, sem explicação."
         )
         r = requests.post(
@@ -150,7 +150,15 @@ def generate_cta_label(msg, stype, xai_key):
         )
         data = r.json()
         if r.ok:
-            return data["choices"][0]["message"]["content"].strip().strip('"\'')[:30]
+            label = data["choices"][0]["message"]["content"].strip().strip('"\'')[:30]
+            # Garante emoji no início e no final
+            import unicodedata
+            def is_emoji(ch):
+                return unicodedata.category(ch) in ('So', 'Sm') or ord(ch) > 0x1F300
+            if label and not is_emoji(label[-1]):
+                first_emoji = next((c for c in label if is_emoji(c)), '🔞')
+                label = f"{label} {first_emoji}"
+            return label
         return ""
     except Exception:
         return ""
