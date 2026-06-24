@@ -1,7 +1,3 @@
-https://raw.githubusercontent.com/devanonimo57/gestteleg/refs/heads/main/index.html
-→ https://raw.githubusercontent.com/devanonimo57/gestteleg/refs/heads/main/index.html
-Content-Type: text/plain; charset=utf-8
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -786,15 +782,6 @@ svg.ico{display:block;flex-shrink:0}
         <!-- Chave Grok removida — usar a chave global da tela de campanhas -->
       </div>
 
-      <div class="card" style="padding:24px;margin-top:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div class="section-title" style="margin-bottom:0">Botões CTA</div>
-          <button class="btn-sm" onclick="addCtaRow()" type="button">+ Adicionar botão</button>
-        </div>
-        <p style="font-size:13px;color:var(--muted-fg);margin-bottom:16px">Aparecem abaixo de cada post. Você pode ter vários (ex: planos diferentes).</p>
-        <div id="ctaRows"></div>
-      </div>
-
       <div class="card" id="logsSection" style="padding:24px;display:none">
         <div class="section-title">Logs recentes</div>
         <div id="logsList"></div>
@@ -1189,7 +1176,6 @@ function showNew(){
   editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
   ['fName','fDesc','fToken','fChat','fPersona'].forEach(id=>document.getElementById(id).value='');
-  loadCtaButtons([]);
   document.getElementById('editorTitle').textContent='Nova Campanha';
   document.getElementById('editorMeta').textContent='';
   document.getElementById('editorStatusBadge').style.display='none';
@@ -1217,7 +1203,6 @@ function showEdit(id){
   document.getElementById('fToken').value=c.token||'';
   document.getElementById('fChat').value=c.chat||'';
   document.getElementById('fPersona').value=c.persona||'';
-  loadCtaButtons(c.cta_buttons||[]);
 
   document.getElementById('editorTitle').textContent=c.name||'Campanha';
   const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
@@ -1706,40 +1691,6 @@ function addSchedule(){
   renderSchedules();closeModal();showToast('Horário adicionado!','success');
 }
 
-// ─── CTA BUTTONS ───
-let ctaButtons=[];
-
-function renderCtaRows(){
-  const el=document.getElementById('ctaRows');
-  if(!el) return;
-  if(!ctaButtons.length){
-    el.innerHTML='<div style="font-size:13px;color:var(--muted-fg);padding:8px 0">Nenhum botão. Clique em "+ Adicionar botão".</div>';
-    return;
-  }
-  el.innerHTML=ctaButtons.map((b,i)=>`
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-      <input class="input-base" style="flex:1" placeholder="Texto do botão (ex: VIP 30 dias — R$34,97)" value="${esc(b.label)}" oninput="ctaButtons[${i}].label=this.value"/>
-      <input class="input-base" style="flex:1.5" placeholder="https://t.me/seubot?start=plano30" value="${esc(b.url)}" oninput="ctaButtons[${i}].url=this.value"/>
-      <button class="icon-btn danger" onclick="removeCtaRow(${i})" title="Remover">✕</button>
-    </div>
-  `).join('');
-}
-
-function addCtaRow(){
-  ctaButtons.push({label:'',url:''});
-  renderCtaRows();
-}
-
-function removeCtaRow(i){
-  ctaButtons.splice(i,1);
-  renderCtaRows();
-}
-
-function loadCtaButtons(buttons){
-  ctaButtons=Array.isArray(buttons)&&buttons.length ? buttons.map(b=>({label:b.label||'',url:b.url||''})) : [];
-  renderCtaRows();
-}
-
 // ─── SAVE ───
 async function saveCamp(){
   const name=document.getElementById('fName').value.trim();
@@ -1754,84 +1705,134 @@ async function saveCamp(){
   }
   const body={
     name,token,chat,
-    cta_buttons: ctaButtons.filter(b=>b.url.trim()),
     desc:document.getElementById('fDesc').value.trim(),
     persona:document.getElementById('fPersona').value.trim(),
+    xai_key:localStorage.getItem('global_xai')||'',
     active:isActive,
     days:campaignDays,
   };
-  try{
-    let r;
-    if(editingId){
-      r=await api('PUT',`/campaigns/${editingId}`,body);
-      if(!r||r.error){showToast(`Erro: ${r?.error||'falhou'}`,'error');return;}
-    } else {
-      r=await api('POST','/campaigns',body);
-      if(!r||r.error){showToast(`Erro: ${r?.error||'falhou'}`,'error');return;}
-      editingId=r.id;
-    }
-    await loadCamps();
-    showToast('Campanha salva!','success');
-    document.getElementById('editorTitle').textContent=name;
-    document.getElementById('testBtn').style.display='inline-flex';
-    document.getElementById('logsSection').style.display='block';
-    renderLogs(r.logs||[]);
-    buildDayNav();
-  }catch(e){showToast('Erro ao salvar','error');console.error(e);}
+  let result;
+  if(editingId){result=await api('PUT',`/campaigns/${editingId}`,body);}
+  else{result=await api('POST','/campaigns',body);editingId=result.id;}
+  await loadCamps();
+  const totalSlots=Object.values(campaignDays).reduce((s,d)=>s+(d.slots?.length||0),0);
+  showToast('Campanha salva!','success');
+  document.getElementById('testBtn').style.display='inline-flex';
+  document.getElementById('editorTitle').textContent=name;
+  document.getElementById('editorMeta').textContent=`${Object.keys(campaignDays).length} dia(s) · ${totalSlots} horários · Atualizado em ${new Date().toLocaleDateString('pt-BR')}`;
+  const badge=document.getElementById('editorStatusBadge');
+  badge.style.display='inline-flex';
+  badge.className=isActive?'pill-active':'pill-paused';
+  badge.innerHTML=isActive?'<span class="pill-active-dot"></span>Ativo':'Pausado';
+  const c=campaigns.find(x=>x.id===editingId);
+  if(c) renderLogs(c.logs||[]);
+  startLogTimer();
 }
+
+// ─── CARDS ───
+function initials(name){return name.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
 
 function renderCards(){
   const el=document.getElementById('campCards');
+  const total=campaigns.length;
+  const active=campaigns.filter(c=>c.active).length;
+  const totalSched=campaigns.reduce((s,c)=>s+Object.values(c.days||{}).reduce((a,d)=>a+(d.slots?.length||0),0),0);
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statActive').textContent=active;
+  document.getElementById('statSchedules').textContent=totalSched;
+  document.getElementById('statToday').textContent=0;
+
   if(!campaigns.length){
-    el.innerHTML='<div style="text-align:center;padding:48px 24px;color:var(--muted-fg)">Nenhuma campanha ainda. Clique em <strong>Nova campanha</strong> para começar.</div>';
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><h3>Nenhuma campanha ainda</h3><p>Crie sua primeira campanha para começar.</p></div>';
     return;
   }
+
   el.innerHTML=campaigns.map(c=>{
-    const days=Object.keys(c.days||{}).length;
-    const slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
-    const initials=(c.name||'?').slice(0,2).toUpperCase();
+    const n=c.schedules?.length||0;
+    const d=c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'';
     const statusPill=c.active
       ?`<span class="pill-active"><span class="pill-active-dot"></span>Ativo</span>`
-      :`<span style="display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in oklab,var(--muted-fg) 25%,transparent);background:color-mix(in oklab,var(--muted-fg) 10%,transparent);color:var(--muted-fg);border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px">Pausado</span>`;
+      :`<span class="pill-paused">Pausado</span>`;
     return `<div class="card camp-card" onclick="showEdit('${c.id}')">
       <div class="camp-stripe"></div>
       <div class="camp-card-left">
-        <div class="camp-avatar">${initials}</div>
+        <div class="camp-avatar">${esc(initials(c.name||'?'))}</div>
         <div>
-          <div class="camp-name">${esc(c.name)} ${statusPill}</div>
+          <div class="camp-name">${esc(c.name)}${statusPill}</div>
           <div class="camp-meta">
-            <span>📅 ${days} dia(s)</span>
-            <span>🕐 ${slots} horários</span>
+            <span>
+              <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              ${n} horário${n!==1?'s':''}
+            </span>
+            ${d?`<span><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${d}</span>`:''}
           </div>
         </div>
       </div>
-      <div class="camp-card-right">
-        <button class="icon-btn danger" title="Excluir" onclick="event.stopPropagation();deleteCamp('${c.id}')">
-          <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      <div class="camp-card-right" onclick="event.stopPropagation()">
+        <button class="icon-btn" title="Editar" onclick="showEdit('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="arrow-btn" title="Editar">
-          <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><polyline points="9 18 15 12 9 6"/></svg>
+        <button class="icon-btn danger" title="Excluir" onclick="delCamp('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+        <button class="arrow-btn" title="Abrir" onclick="showEdit('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
         </button>
       </div>
     </div>`;
   }).join('');
+
+  // Import suggestion card
+  el.innerHTML+=`<div class="card import-card">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="import-icon">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600">Importar canal existente</div>
+        <div style="margin-top:2px;font-size:12px;color:var(--muted-fg)">Cole o link do canal e a IA configura cronograma e persona automaticamente.</div>
+      </div>
+    </div>
+    <button class="import-card-btn" onclick="showNew()">Importar</button>
+  </div>`;
 }
 
-async function deleteCamp(id){
+async function delCamp(id){
   if(!confirm('Excluir esta campanha?')) return;
   await api('DELETE',`/campaigns/${id}`);
-  await loadCamps();
-  renderCards();
-  showToast('Campanha excluída','success');
+  await loadCamps();renderCards();showToast('Campanha excluída','error');
 }
 
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-function showToast(msg,type='info'){
+// ─── UTILS ───
+function showToast(msg,type=''){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast show '+type;
-  clearTimeout(t._to);t._to=setTimeout(()=>t.classList.remove('show'),3200);
+  t.textContent=msg;t.className='show '+type;
+  clearTimeout(t._t);t._t=setTimeout(()=>t.className='',2800);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ─── INIT ───
+showList();
+
+// ─── LIGHTBOX ───
+function openLightbox(url){
+  let lb=document.getElementById('imgLightbox');
+  if(!lb){
+    lb=document.createElement('div');
+    lb.id='imgLightbox';
+    lb.innerHTML='<img id="imgLightboxImg">';
+    lb.addEventListener('click',closeLightbox);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+    document.body.appendChild(lb);
+  }
+  document.getElementById('imgLightboxImg').src=url;
+  lb.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(){
+  const lb=document.getElementById('imgLightbox');
+  if(lb){lb.style.display='none';}
+  document.body.style.overflow='';
 }
 </script>
 </body>
-</html>
