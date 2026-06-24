@@ -1423,11 +1423,27 @@ async function generateCopyInline(idx){
   const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
   if(!xai){showToast('Informe a chave Grok/xAI','error');return;}
-  if(!persona){showToast('Preencha a persona da campanha','error');return;}
   const s=schedules[idx];
-  const r=await api('POST','/generate-copy',{persona,type:s.type,xai_key:xai});
-  if(r.ok){schedules[idx].msg=r.copy;renderSchedules();showToast('Copy gerada!','success');}
-  else showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+  // Desabilita botões durante geração
+  const btnRow=document.querySelector(`#wrap_${idx} .sa-btn.ai`);
+  const btnExpand=document.querySelector(`#expand_${idx} .slot-ai-btn`);
+  if(btnRow){btnRow.disabled=true;btnRow.textContent='⏳';}
+  if(btnExpand){btnExpand.disabled=true;btnExpand.textContent='⏳';}
+  // Usa visão se o slot tem imagem/vídeo com media_path
+  const useVision=(s.type==='image'||s.type==='video')&&s.media_path;
+  let msg='';
+  if(useVision){
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:s.media_path});
+    msg=r.msg||'';
+    if(!msg) showToast(`Erro Vision: ${r.vision_err||'falhou'}`,'error');
+  } else {
+    const r=await api('POST','/generate-copy',{persona,type:s.type,xai_key:xai});
+    msg=r.copy||'';
+    if(!msg) showToast(`Erro Grok: ${r.error||'falhou'}`,'error');
+  }
+  if(msg){schedules[idx].msg=msg;renderSchedules();showToast('Copy gerada!','success');}
+  if(btnRow){btnRow.disabled=false;btnRow.textContent='✨';}
+  if(btnExpand){btnExpand.disabled=false;btnExpand.textContent='✨ IA';}
 }
 
 async function generateCopyModal(){
