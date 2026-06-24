@@ -149,9 +149,11 @@ Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{
             err = data.get("error", data)
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
+            print(f"[Vision] Erro {r.status_code}: {err}")
             return "", f"xAI Vision HTTP {r.status_code}: {err}"
         return data["choices"][0]["message"]["content"].strip(), ""
     except Exception as e:
+        print(f"[Vision] Exception: {e}")
         return "", str(e)
 
 # ---------- Telegram ----------
@@ -599,7 +601,7 @@ def get_slot_configs(cid, day):
 
 @app.route("/api/generate-slot-copy", methods=["POST"])
 def api_generate_slot_copy():
-    """Gera copy para um único slot (visão ou texto)."""
+    """Gera copy para um único slot (visão ou texto, com fallback)."""
     body       = request.json or {}
     persona    = body.get("persona", "")
     xai_key    = body.get("xai_key", "")
@@ -607,11 +609,17 @@ def api_generate_slot_copy():
     media_path = body.get("media_path", "")
     if not xai_key:
         return jsonify({"ok": False, "error": "Chave Grok não informada"})
+    vision_err = ""
+    msg = ""
     if stype in ("image", "video") and media_path:
-        msg, err = generate_copy_vision(persona, media_path, xai_key)
+        msg, vision_err = generate_copy_vision(persona, media_path, xai_key)
+        if not msg:
+            # Fallback: gera legenda por texto quando visão falha
+            print(f"[Vision] Falhou ({vision_err}), usando fallback texto")
+            msg, _ = generate_copy(persona, stype, xai_key)
     else:
-        msg, err = generate_copy(persona, stype, xai_key)
-    return jsonify({"ok": bool(msg), "msg": msg, "error": err})
+        msg, vision_err = generate_copy(persona, stype, xai_key)
+    return jsonify({"ok": bool(msg), "msg": msg, "vision_err": vision_err})
 
 
 @app.route("/api/generate-copy", methods=["POST"])
