@@ -1,7 +1,7 @@
 import os, uuid, time, requests, json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
+from flask import Flask, request, jsonify, send_from_directory
 from apscheduler.schedulers.background import BackgroundScheduler
 from supabase import create_client
 
@@ -569,7 +569,7 @@ def api_generate_copy():
 
 @app.route("/api/generate-day", methods=["POST"])
 def api_generate_day():
-    """Gera slots em streaming SSE — cada slot é enviado assim que o Grok termina."""
+    """Gera slots para um dia com fotos da galeria + IA em paralelo."""
     body    = request.json or {}
     persona = body.get("persona", "")
     xai_key = body.get("xai_key", "")
