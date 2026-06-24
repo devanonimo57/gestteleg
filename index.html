@@ -277,7 +277,9 @@ main{max-width:1280px;margin:0 auto;padding:48px 24px}
   width:100%;background:var(--input-bg);border:1px solid var(--border);
   border-radius:12px;padding:10px 14px;font-size:14px;color:var(--foreground);
   font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
+  color-scheme:dark;
 }
+.input-base option{background:oklch(0.19 0.015 285);color:oklch(0.985 0 0)}
 .input-base:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent);box-shadow:0 0 0 3px color-mix(in oklab,var(--primary) 20%,transparent)}
 .input-base::placeholder{color:var(--muted-fg)}
 .input-mono{font-family:'JetBrains Mono',monospace;font-size:12px}
@@ -348,7 +350,8 @@ textarea.input-base{resize:vertical;min-height:88px}
   border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--foreground);
   cursor:pointer;transition:background .15s;
 }
-.type-sel select{background:transparent;border:none;color:inherit;font-size:inherit;font-weight:inherit;font-family:inherit;outline:none;cursor:pointer;padding-right:4px}
+.type-sel select{background:oklch(0.19 0.015 285);border:none;color:var(--foreground);font-size:inherit;font-weight:inherit;font-family:inherit;outline:none;cursor:pointer;padding-right:4px}
+.type-sel select option{background:oklch(0.19 0.015 285);color:var(--foreground)}
 .type-sel:hover{background:rgba(255,255,255,.06)}
 
 .sched-actions{display:flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s}
