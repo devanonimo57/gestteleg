@@ -123,16 +123,19 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
 
 
 def generate_cta_label(msg, stype, xai_key):
-    """Gera texto curto e contextualizado para o botão CTA baseado no conteúdo do post."""
+    """Gera texto curto, explícito e contextualizado para o botão CTA."""
     if not xai_key or not msg or stype == "poll":
         return ""
     try:
         prompt = (
-            f"Crie um texto ultra-curto (máx 25 caracteres) para um botão CTA no Telegram, "
-            f"contextualizado com este post adulto: \"{msg[:200]}\"\n"
-            f"O botão leva o seguidor a um grupo VIP. "
-            f"Use 1 emoji + texto curto. Ex: '🔞 Ver mais', '💥 Acessa aqui', '🔥 Entrar'.\n"
-            f"Responda APENAS com o texto do botão, sem aspas, sem explicação."
+            f"Post de canal adulto no Telegram: \"{msg[:200]}\"\n\n"
+            f"Escreva o texto de um botão CTA para esse post. Regras:\n"
+            f"- Máximo 20 caracteres\n"
+            f"- Explícito, safado, direto\n"
+            f"- Contextualizado com o que está no post\n"
+            f"- 1 emoji + texto curtíssimo\n"
+            f"- Exemplos: '🍆 Ver completo', '🔞 Quero mais', '💦 Assiste aqui', '😈 Entra no grupo'\n"
+            f"Responda SOMENTE com o texto do botão, sem aspas, sem explicação."
         )
         r = requests.post(
             "https://api.x.ai/v1/chat/completions",
@@ -140,14 +143,14 @@ def generate_cta_label(msg, stype, xai_key):
             json={
                 "model": "grok-4.3",
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 20,
-                "temperature": 0.85,
+                "max_tokens": 15,
+                "temperature": 0.9,
             },
             timeout=15,
         )
         data = r.json()
         if r.ok:
-            return data["choices"][0]["message"]["content"].strip().strip('"\'')[:35]
+            return data["choices"][0]["message"]["content"].strip().strip('"\'')[:30]
         return ""
     except Exception:
         return ""
