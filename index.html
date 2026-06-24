@@ -563,10 +563,11 @@ textarea.input-base{resize:vertical;min-height:88px}
 }
 .day-upload-label:hover{background:color-mix(in oklab,var(--primary) 20%,transparent)}
 .day-camp-sel{
-  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-fg);
-  background:var(--input-bg);border:1px solid var(--border);border-radius:8px;
-  padding:6px 10px;color-scheme:dark;
+  font-family:'Inter',sans-serif;font-size:13px;color:var(--foreground);
+  background:oklch(0.19 0.015 285);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;color-scheme:dark;outline:none;
 }
+.day-camp-sel option{background:oklch(0.19 0.015 285);color:var(--foreground);}
 
 /* STORAGE BAR */
 .storage-card{padding:20px;margin-bottom:24px}
@@ -1000,7 +1001,14 @@ async function showGallery(){
 
 async function loadMedia(){
   const campId=document.getElementById('galCampSel')?.value||'';
-  const url=campId?`/api/media?campaign_id=${encodeURIComponent(campId)}`:'/api/media';
+  if(!campId){
+    galleryDays=[];
+    document.getElementById('storageText').textContent='— / 1 GB';
+    document.getElementById('storageFill').style.width='0%';
+    document.getElementById('dayFolders').innerHTML='<div class="empty"><div class="empty-icon">📁</div><h3>Selecione uma campanha</h3><p>Escolha uma campanha acima para ver os dias configurados.</p></div>';
+    return;
+  }
+  const url=`/api/media?campaign_id=${encodeURIComponent(campId)}`;
   const r=await fetch(url);
   const data=await r.json();
   galleryDays=data.days||[];
