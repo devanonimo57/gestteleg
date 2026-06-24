@@ -44,25 +44,29 @@ def save_data(campaigns):
 
 # ---------- Geração de conteúdo (Grok) ----------
 
-def generate_copy(persona, post_type, xai_key):
+def generate_copy(persona, post_type, xai_key, used_texts=None):
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
 
     type_hints = {
-        "image":    "uma legenda curta e envolvente para uma imagem",
+        "image":    "uma legenda curta para a foto",
         "reaction": "uma mensagem curta que gere reação e engajamento",
         "poll":     "uma enquete com pergunta na primeira linha e 3 opções nas linhas seguintes",
-        "text":     "uma mensagem de texto curta e envolvente",
-        "video":    "uma legenda curta e envolvente para um vídeo",
+        "text":     "uma mensagem de texto curta",
+        "video":    "uma legenda curta para o vídeo",
     }
     hint = type_hints.get(post_type, "uma mensagem curta")
 
-    system = f"""Você é um redator de conteúdo para Telegram.
-Persona do canal: {persona}
-Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.
-Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4)."""
+    historico = ""
+    if used_texts:
+        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
+        historico = f"\n\nTextos já usados hoje (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
 
-    prompt = f"Crie {hint} para o canal. Seja criativo, direto e no estilo da persona."
+    system = f"""{persona}
+Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.
+Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4).{historico}"""
+
+    prompt = f"Escreva {hint}. Gancho diferente de tudo que já foi postado hoje."
 
     try:
         r = requests.post(
@@ -75,7 +79,7 @@ Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4)."
                     {"role": "user",   "content": prompt},
                 ],
                 "max_tokens": 200,
-                "temperature": 0.85,
+                "temperature": 0.95,
             },
             timeout=20,
         )
@@ -88,6 +92,63 @@ Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4)."
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
             return "", f"xAI HTTP {r.status_code}: {err}"
+        return data["choices"][0]["message"]["content"].strip(), ""
+    except Exception as e:
+        return "", str(e)
+
+
+def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
+    """Analisa a imagem visualmente e gera copy com base no que a Grok vê."""
+    if not xai_key:
+        return "", "Chave Grok/xAI não informada"
+
+    historico = ""
+    if used_texts:
+        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
+        historico = f"\n\nTextos já usados hoje (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
+
+    system = f"""{persona}
+Você receberá uma foto. Descreva o que está acontecendo na imagem de forma sensual e explícita, \
+criando uma legenda curta que faça o seguidor imaginar a cena com detalhes. \
+Escreva na primeira pessoa, como se fosse a modelo falando. \
+Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{historico}"""
+
+    try:
+        r = requests.post(
+            "https://api.x.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
+            json={
+                "model": "grok-2-vision-1212",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_url, "detail": "high"},
+                            },
+                            {
+                                "type": "text",
+                                "text": "Olha essa foto e escreve a legenda. Gancho diferente de tudo que já foi postado hoje.",
+                            },
+                        ],
+                    },
+                ],
+                "max_tokens": 200,
+                "temperature": 0.95,
+            },
+            timeout=30,
+        )
+        try:
+            data = r.json()
+        except ValueError:
+            data = {"error": r.text[:300]}
+        if not r.ok:
+            err = data.get("error", data)
+            if isinstance(err, dict):
+                err = err.get("message") or err.get("error") or str(err)
+            return "", f"xAI Vision HTTP {r.status_code}: {err}"
         return data["choices"][0]["message"]["content"].strip(), ""
     except Exception as e:
         return "", str(e)
@@ -535,6 +596,7 @@ def api_generate_day():
     photo_idx = 0
 
     slots = []
+    used_texts = []  # anti-repetição: acumula textos gerados no dia
     for hour, stype in enumerate(DAY_TYPES):
         msg = ""
         media_path = ""
@@ -548,10 +610,17 @@ def api_generate_day():
                 media_name = fname
                 photo_idx += 1
             if xai_key and persona:
-                msg, _ = generate_copy(persona, stype, xai_key)
+                if media_path:
+                    # Grok vê a imagem e gera copy baseada no que está na foto
+                    msg, _ = generate_copy_vision(persona, media_path, xai_key, used_texts)
+                else:
+                    msg, _ = generate_copy(persona, stype, xai_key, used_texts)
         else:
             if xai_key and persona:
-                msg, _ = generate_copy(persona, stype, xai_key)
+                msg, _ = generate_copy(persona, stype, xai_key, used_texts)
+
+        if msg:
+            used_texts.append(msg)
 
         slots.append({
             "id":         str(uuid.uuid4()),
