@@ -332,13 +332,22 @@ def save_campaign_day(cid, day):
 
 @app.route("/api/campaigns/<cid>/days/<day>", methods=["DELETE"])
 def delete_campaign_day(cid, day):
-    """Remove o dia da campanha (não apaga as fotos da galeria)."""
+    """Remove o dia da campanha E apaga a pasta/fotos do Storage."""
     campaigns = load_data()
     for c in campaigns:
         if c["id"] == cid:
             c.get("days", {}).pop(day, None)
             save_data(campaigns)
             register_all_jobs()
+            # Apaga todos os arquivos da pasta no Storage
+            try:
+                sb = get_sb()
+                items = sb.storage.from_(BUCKET).list(path=day) or []
+                files_to_delete = [f"{day}/{f['name']}" for f in items if f.get("name")]
+                if files_to_delete:
+                    sb.storage.from_(BUCKET).remove(files_to_delete)
+            except Exception as e:
+                print(f"[Storage] Erro ao apagar pasta {day}: {e}")
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
@@ -408,11 +417,14 @@ def list_media():
     campaign_id = request.args.get("campaign_id", "")
     real_sb     = get_sb()
 
-    posted_by_day = {}
+    posted_by_day  = {}
+    campaign_days_filter = None  # None = sem filtro, set() = filtrar por estes dias
+
     if campaign_id:
         campaigns = load_data()
         c = next((x for x in campaigns if x["id"] == campaign_id), None)
         if c:
+            campaign_days_filter = set(c.get("days", {}).keys())
             for day, day_data in c.get("days", {}).items():
                 used = [s.get("media_path","") for s in day_data.get("slots",[]) if s.get("media_path")]
                 posted_by_day[day] = set(used)
@@ -423,6 +435,9 @@ def list_media():
     day_folders = [item.get("name") for item in root_items if item.get("metadata") is None and item.get("name")]
 
     for day in sorted(day_folders, reverse=True):
+        # Se campanha selecionada, mostrar só os dias dela
+        if campaign_days_filter is not None and day not in campaign_days_filter:
+            continue
         posted_set = posted_by_day.get(day, set())
         try:
             day_items = real_sb.storage.from_(BUCKET).list(path=day) or []
