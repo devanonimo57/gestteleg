@@ -122,6 +122,37 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
         return "", str(e)
 
 
+def generate_cta_label(msg, stype, xai_key):
+    """Gera texto curto e contextualizado para o botão CTA baseado no conteúdo do post."""
+    if not xai_key or not msg or stype == "poll":
+        return ""
+    try:
+        prompt = (
+            f"Crie um texto ultra-curto (máx 25 caracteres) para um botão CTA no Telegram, "
+            f"contextualizado com este post adulto: \"{msg[:200]}\"\n"
+            f"O botão leva o seguidor a um grupo VIP. "
+            f"Use 1 emoji + texto curto. Ex: '🔞 Ver mais', '💥 Acessa aqui', '🔥 Entrar'.\n"
+            f"Responda APENAS com o texto do botão, sem aspas, sem explicação."
+        )
+        r = requests.post(
+            "https://api.x.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
+            json={
+                "model": "grok-4.3",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 20,
+                "temperature": 0.85,
+            },
+            timeout=15,
+        )
+        data = r.json()
+        if r.ok:
+            return data["choices"][0]["message"]["content"].strip().strip('"\'')[:35]
+        return ""
+    except Exception:
+        return ""
+
+
 def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
@@ -228,8 +259,8 @@ def _run_slot(campaign, slot, day):
     msg       = slot.get("msg", "").strip()
     media     = slot.get("media_path", "").strip()
     day_data  = campaign.get("days", {}).get(day, {})
-    cta_label = day_data.get("cta_label", "").strip()
-    cta_url   = day_data.get("cta_url", "").strip()
+    cta_label = slot.get("cta_label", "").strip() or day_data.get("cta_label", "").strip()
+    cta_url   = campaign.get("cta_url", "").strip()
     print(f"[SEND] {stype} | {day} {slot.get('time')} | campaign={campaign['id'][:8]} | cta={'sim' if cta_label else 'não'}")
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -404,13 +435,11 @@ def get_campaign_day(cid, day):
 def save_campaign_day(cid, day):
     body      = request.json or {}
     slots     = body.get("slots", [])
-    cta_label = body.get("cta_label", "").strip()
-    cta_url   = body.get("cta_url", "").strip()
     campaigns = load_data()
     for c in campaigns:
         if c["id"] == cid:
             c.setdefault("days", {})
-            c["days"][day] = {"slots": slots, "cta_label": cta_label, "cta_url": cta_url}
+            c["days"][day] = {"slots": slots}
             save_data(campaigns)
             register_all_jobs()
             return jsonify({"ok": True})
@@ -624,7 +653,8 @@ def api_generate_slot_copy():
             msg, _ = generate_copy(persona, stype, xai_key)
     else:
         msg, vision_err = generate_copy(persona, stype, xai_key)
-    return jsonify({"ok": bool(msg), "msg": msg, "vision_err": vision_err})
+    cta_label = generate_cta_label(msg, stype, xai_key) if msg else ""
+    return jsonify({"ok": bool(msg), "msg": msg, "cta_label": cta_label, "vision_err": vision_err})
 
 @app.route("/api/generate-copy", methods=["POST"])
 def api_generate_copy():
@@ -681,27 +711,29 @@ def api_generate_day():
 
     def generate_for_slot(cfg):
         if not (xai_key and persona):
-            return cfg, ""
+            return cfg, "", ""
         stype = cfg["type"]
         if stype in ("image", "video") and cfg["media_path"]:
             msg, _ = generate_copy_vision(persona, cfg["media_path"], xai_key)
         else:
             msg, _ = generate_copy(persona, stype, xai_key)
-        return cfg, msg
+        cta = generate_cta_label(msg, stype, xai_key) if msg else ""
+        return cfg, msg, cta
 
     results = {}
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(generate_for_slot, cfg): cfg for cfg in slot_configs}
         for future in as_completed(futures):
-            cfg, msg = future.result()
-            results[cfg["id"]] = msg
+            cfg, msg, cta = future.result()
+            results[cfg["id"]] = {"msg": msg, "cta_label": cta}
 
     slots = [
         {
             "id":         cfg["id"],
             "time":       f"{cfg['hour']:02d}:00",
             "type":       cfg["type"],
-            "msg":        results.get(cfg["id"], ""),
+            "msg":        results.get(cfg["id"], {}).get("msg", ""),
+            "cta_label":  results.get(cfg["id"], {}).get("cta_label", ""),
             "media_path": cfg["media_path"],
             "media_name": cfg["media_name"],
         }
