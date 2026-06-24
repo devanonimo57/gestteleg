@@ -1439,26 +1439,68 @@ async function generateCopyModal(){
 
 async function generateDay(){
   if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
   const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
   if(schedules.length>0&&!confirm(`Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`)) return;
+
   const btn=document.getElementById('genDayBtn');
+  const prog=document.getElementById('genProgress');
+  const bar=document.getElementById('genBar');
   btn.disabled=true;
-  btn.textContent='⏳ Gerando…';
-  const prog=document.getElementById('genProgress');const bar=document.getElementById('genBar');
-  prog.style.display='block';bar.style.width='15%';
-  showToast(`Gerando dia ${selectedDay}`+(xai?' com Grok':'')+'…','info');
+  prog.style.display='block';
+  bar.style.width='0%';
+
+  // Limpa slots atuais
+  schedules=[];
+  campaignDays[selectedDay]={slots:[]};
+  renderSchedules();
+
   try{
-    const r=await api('POST','/generate-day',{persona,xai_key:xai,day:selectedDay});
-    bar.style.width='100%';
-    if(r.ok){
-      schedules=r.slots.map((s,i)=>({...s,_idx:i}));
-      campaignDays[selectedDay]={slots:[...schedules]};
-      await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
-      renderSchedules();buildDayNav();
-      showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
-    } else showToast('Erro ao gerar dia','error');
-  }catch(e){showToast('Erro de conexão','error');}
+    // 1. Busca configuração dos slots (com fotos atribuídas, sem copy)
+    const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs`);
+    if(!cfgRes.ok){showToast('Erro ao carregar configuração','error');btn.disabled=false;prog.style.display='none';return;}
+
+    const configs=cfgRes.configs;
+    const total=configs.length;
+
+    // 2. Gera copy para cada slot individualmente — aparece em tempo real
+    for(let i=0;i<configs.length;i++){
+      const cfg=configs[i];
+      btn.textContent=`⏳ ${i+1} / ${total}`;
+      bar.style.width=Math.round((i+1)/total*100)+'%';
+
+      let msg='';
+      if(xai&&persona){
+        const r=await api('POST','/generate-slot-copy',{
+          persona,xai_key:xai,type:cfg.type,media_path:cfg.media_path
+        });
+        msg=r.msg||'';
+      }
+
+      const slot={
+        id:cfg.id,
+        time:`${String(cfg.hour).padStart(2,'0')}:00`,
+        type:cfg.type,
+        msg,
+        media_path:cfg.media_path,
+        media_name:cfg.media_name,
+        _idx:i,
+      };
+      schedules.push(slot);
+      campaignDays[selectedDay].slots=[...schedules];
+      renderSchedules();
+    }
+
+    // 3. Salva tudo no servidor
+    await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
+    buildDayNav();
+    showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+
+  }catch(e){
+    showToast('Erro de conexão','error');
+  }
+
   btn.disabled=false;
   btn.innerHTML='<svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Gerar dia completo com IA';
   setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
