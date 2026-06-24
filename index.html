@@ -326,14 +326,64 @@ textarea.input-base{resize:vertical;min-height:88px}
 .cp-muted{background:rgba(255,255,255,.04);color:var(--muted-fg);border-color:var(--border)}
 
 .sched-scroll{max-height:520px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.sched-wrap{border-bottom:1px solid var(--border)}
+.sched-wrap:last-child{border-bottom:none}
 .sched-row{
   display:flex;align-items:center;gap:16px;padding:12px 24px;
-  border-bottom:1px solid var(--border);transition:background .15s;
+  transition:background .15s;cursor:default;
 }
-.sched-row:last-child{border-bottom:none}
 .sched-row:hover{background:rgba(255,255,255,.02)}
 .sched-time{width:56px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--muted-fg);flex-shrink:0}
 .sched-mid{display:flex;flex:1;align-items:center;gap:12px;min-width:0}
+
+/* slot expand */
+.slot-expand{
+  display:none;padding:0 24px 14px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,.015);
+}
+.slot-expand.open{display:block}
+.slot-msg{
+  width:100%;background:var(--input-bg);border:1px solid var(--border);
+  border-radius:10px;padding:9px 12px;font-size:13px;color:var(--foreground);
+  font-family:inherit;outline:none;resize:vertical;min-height:72px;
+  transition:border-color .15s;color-scheme:dark;margin-bottom:8px;
+}
+.slot-msg:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent)}
+.slot-msg::placeholder{color:var(--muted-fg)}
+.slot-media-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.slot-media-name{font-size:11px;color:var(--muted-fg);font-family:'JetBrains Mono',monospace;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-upload-btn{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  color:var(--muted-fg);padding:5px 10px;cursor:pointer;position:relative;overflow:hidden;
+  transition:background .15s,color .15s;white-space:nowrap;flex-shrink:0;
+}
+.slot-upload-btn:hover{background:rgba(255,255,255,.08);color:var(--foreground)}
+.slot-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.slot-gallery-btn{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  color:var(--muted-fg);padding:5px 10px;cursor:pointer;
+  transition:background .15s,color .15s;white-space:nowrap;flex-shrink:0;
+}
+.slot-gallery-btn:hover{background:rgba(255,255,255,.08);color:var(--foreground)}
+.slot-bottom-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.slot-ai-btn{
+  font-size:11px;font-weight:700;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 25%,transparent);
+  color:var(--primary);border-radius:8px;padding:5px 12px;cursor:pointer;
+  transition:background .15s;
+}
+.slot-ai-btn:hover{background:color-mix(in oklab,var(--primary) 22%,transparent)}
+.chevron-btn{
+  width:24px;height:24px;border-radius:6px;border:none;background:transparent;
+  color:var(--muted-fg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:color .15s,transform .2s;font-size:11px;flex-shrink:0;
+}
+.chevron-btn.open{transform:rotate(180deg)}
+.chevron-btn:hover{color:var(--foreground)}
 .type-chip{
   width:28px;height:28px;border-radius:8px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:12px;
@@ -887,12 +937,25 @@ function renderPickerGrid(grid){
   grid.innerHTML=galleryFiles.map(f=>galItemHTML(f,true)).join('');
 }
 function pickMedia(url,name){
-  pendingPath=url;pendingName=name;
-  const prev=document.getElementById('mPreviews');prev.innerHTML='';
-  const isVid=/\.(mp4|mov|avi|webm)$/i.test(name);
-  if(isVid){const b=document.createElement('div');b.className='prev-badge';b.textContent='🎬 '+name.slice(0,20);prev.appendChild(b);}
-  else{const img=document.createElement('img');img.src=url;img.className='prev-img';prev.appendChild(img);}
-  closeGalleryPicker();showToast('Mídia selecionada!','success');
+  if(activePickerIdx!==null){
+    // picking for a slot row
+    const idx=activePickerIdx;activePickerIdx=null;
+    if(schedules[idx]){schedules[idx].media_path=url;schedules[idx].media_name=name;}
+    closeGalleryPicker();
+    renderSchedules();
+    // re-open the expand after re-render
+    expandedSlots.add(idx);
+    renderSchedules();
+    showToast('Mídia selecionada!','success');
+  } else {
+    // picking for the add-schedule modal
+    pendingPath=url;pendingName=name;
+    const prev=document.getElementById('mPreviews');prev.innerHTML='';
+    const isVid=/\.(mp4|mov|avi|webm)$/i.test(name);
+    if(isVid){const b=document.createElement('div');b.className='prev-badge';b.textContent='🎬 '+name.slice(0,20);prev.appendChild(b);}
+    else{const img=document.createElement('img');img.src=url;img.className='prev-img';prev.appendChild(img);}
+    closeGalleryPicker();showToast('Mídia selecionada!','success');
+  }
 }
 function closeGalleryPicker(){document.getElementById('galleryPicker').classList.remove('open');}
 
@@ -1030,21 +1093,53 @@ async function testConn(){
 }
 
 // ─── SCHEDULE RENDER ───
+let expandedSlots=new Set();
+let activePickerIdx=null;
+
 function renderSchedules(){
   const sorted=[...schedules].sort((a,b)=>a.time.localeCompare(b.time));
+  const isMedia=t=>t==='image'||t==='video';
   document.getElementById('schedList').innerHTML=sorted.map(s=>{
     const m=TYPE[s.type]||TYPE.text;
     const opts=Object.entries(TYPE).map(([k,v])=>`<option value="${k}"${k===s.type?' selected':''}>${v.icon} ${v.label}</option>`).join('');
-    return `<div class="sched-row">
-      <span class="sched-time">${s.time}</span>
-      <div class="sched-mid">
-        <div class="type-chip ${m.chipCls}">${m.icon}</div>
-        <div class="type-sel"><select onchange="chType(${s._idx},this.value)">${opts}</select></div>
+    const isOpen=expandedSlots.has(s._idx);
+    const preview=s.msg?s.msg.slice(0,30)+(s.msg.length>30?'…':''):'';
+    const mediaLabel=s.media_name?`📎 ${s.media_name.slice(0,18)}`:'';
+    const previewText=preview||mediaLabel;
+    return `<div class="sched-wrap" id="wrap_${s._idx}">
+      <div class="sched-row">
+        <span class="sched-time">${s.time}</span>
+        <div class="sched-mid">
+          <div class="type-chip ${m.chipCls}">${m.icon}</div>
+          <div class="type-sel"><select onchange="chType(${s._idx},this.value)">${opts}</select></div>
+          ${previewText?`<span style="font-size:11px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">${esc(previewText)}</span>`:''}
+        </div>
+        <div class="sched-actions">
+          <button class="sa-btn ai" title="Gerar copy com IA" onclick="generateCopyInline(${s._idx})">✨</button>
+          ${editingId?`<button class="sa-btn play" title="Enviar agora" onclick="sendNow('${s.id||''}',${s._idx})">▶</button>`:''}
+          <button class="sa-btn del" title="Remover" onclick="rmSched(${s._idx})">✕</button>
+        </div>
+        <button class="chevron-btn${isOpen?' open':''}" onclick="toggleExpand(${s._idx})" title="Editar conteúdo">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
       </div>
-      <div class="sched-actions">
-        <button class="sa-btn ai" title="Gerar copy com IA" onclick="generateCopyInline(${s._idx})">✨</button>
-        ${editingId?`<button class="sa-btn play" title="Enviar agora" onclick="sendNow('${s.id||''}',${s._idx})">▶</button>`:''}
-        <button class="sa-btn del" title="Remover" onclick="rmSched(${s._idx})">✕</button>
+      <div class="slot-expand${isOpen?' open':''}" id="expand_${s._idx}">
+        <div style="padding-top:12px">
+          ${isMedia(s.type)?`
+          <div class="slot-media-row" style="margin-bottom:8px">
+            <span class="slot-media-name" id="mname_${s._idx}">${s.media_name?esc(s.media_name):'Nenhuma mídia selecionada'}</span>
+            <label class="slot-upload-btn">
+              📁 Upload
+              <input type="file" accept="image/*,video/*" onchange="slotUpload(event,${s._idx})"/>
+            </label>
+            <button class="slot-gallery-btn" onclick="openSlotPicker(${s._idx})">🖼️ Galeria</button>
+            ${s.media_path?`<button class="slot-gallery-btn" onclick="clearSlotMedia(${s._idx})">✕</button>`:''}
+          </div>`:''}
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea class="slot-msg" id="smsg_${s._idx}" placeholder="${s.type==='poll'?'Pergunta (1ª linha) + opções (próximas linhas)':'Mensagem / legenda…'}" oninput="slotMsgChange(${s._idx},this.value)">${esc(s.msg||'')}</textarea>
+            <button class="slot-ai-btn" onclick="generateCopyInline(${s._idx})" title="Gerar com IA">✨ IA</button>
+          </div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1057,6 +1152,45 @@ function renderSchedules(){
     return `<span class="count-pill ${m.pillCls}">${m.icon} ${n} ${m.label.toLowerCase()}</span>`;
   }).join('');
 }
+
+function toggleExpand(idx){
+  if(expandedSlots.has(idx)) expandedSlots.delete(idx);
+  else expandedSlots.add(idx);
+  renderSchedules();
+  // re-focus textarea if opening
+  if(expandedSlots.has(idx)){
+    const ta=document.getElementById('smsg_'+idx);
+    if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+  }
+}
+
+function slotMsgChange(idx,val){
+  if(schedules[idx]) schedules[idx].msg=val;
+}
+
+async function slotUpload(e,idx){
+  const file=e.target.files[0];if(!file) return;
+  showToast('Enviando…','info');
+  const fd=new FormData();fd.append('file',file);
+  const r=await fetch('/api/upload',{method:'POST',body:fd});
+  const data=await r.json();
+  if(schedules[idx]){schedules[idx].media_path=data.path;schedules[idx].media_name=data.name;}
+  const mn=document.getElementById('mname_'+idx);
+  if(mn) mn.textContent=data.name;
+  showToast('Mídia enviada!','success');
+  e.target.value='';
+}
+
+function openSlotPicker(idx){
+  activePickerIdx=idx;
+  openGalleryPicker();
+}
+
+function clearSlotMedia(idx){
+  if(schedules[idx]){schedules[idx].media_path='';schedules[idx].media_name='';}
+  renderSchedules();
+}
+
 
 function chType(idx,type){if(schedules[idx])schedules[idx].type=type;renderSchedules();}
 function rmSched(idx){schedules.splice(idx,1);schedules.forEach((s,i)=>s._idx=i);renderSchedules();}
