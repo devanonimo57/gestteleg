@@ -351,6 +351,8 @@ textarea.input-base{resize:vertical;min-height:88px}
 }
 .slot-msg:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent)}
 .slot-msg::placeholder{color:var(--muted-fg)}
+.slot-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);cursor:pointer}
+.slot-preview-img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);display:block}
 .slot-media-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .slot-media-name{font-size:11px;color:var(--muted-fg);font-family:'JetBrains Mono',monospace;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slot-upload-btn{
@@ -1312,7 +1314,8 @@ function renderSchedules(){
         <div class="sched-mid">
           <div class="type-chip ${m.chipCls}">${m.icon}</div>
           <div class="type-sel"><select onchange="chType(${s._idx},this.value)">${opts}</select></div>
-          ${previewText?`<span style="font-size:11px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">${esc(previewText)}</span>`:''}
+          ${isMedia(s.type)&&s.media_path?`<img class="slot-thumb" src="${s.media_path}" alt="" onclick="toggleExpand(${s._idx})" title="Ver imagem">`:''}
+          ${previewText?`<span style="font-size:11px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">${esc(previewText)}</span>`:''}
         </div>
         <div class="sched-actions">
           <button class="sa-btn ai" title="Gerar copy com IA" onclick="generateCopyInline(${s._idx})">✨</button>
@@ -1326,6 +1329,7 @@ function renderSchedules(){
       <div class="slot-expand${isOpen?' open':''}" id="expand_${s._idx}">
         <div style="padding-top:12px">
           ${isMedia(s.type)?`
+          ${s.media_path&&s.type==='image'?`<img class="slot-preview-img" src="${s.media_path}" alt="Preview">`:''}
           <div class="slot-media-row" style="margin-bottom:8px">
             <span class="slot-media-name" id="mname_${s._idx}">${s.media_name?esc(s.media_name):'Nenhuma mídia selecionada'}</span>
             <label class="slot-upload-btn">
