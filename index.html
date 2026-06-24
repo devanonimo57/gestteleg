@@ -478,9 +478,9 @@ textarea.input-base{resize:vertical;min-height:88px}
 .copy-ai-btn:hover{background:color-mix(in oklab,var(--primary) 25%,transparent)}
 
 /* ─── GALLERY ─── */
-.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .gal-item{
-  border-radius:var(--radius);overflow:hidden;
+  border-radius:12px;overflow:hidden;
   border:1px solid var(--border);position:relative;aspect-ratio:1;cursor:pointer;
   transition:border-color .15s;
 }
@@ -490,18 +490,24 @@ textarea.input-base{resize:vertical;min-height:88px}
   position:absolute;inset:0;
   background:linear-gradient(to top,rgba(0,0,0,.6),transparent);
   opacity:0;transition:opacity .2s;
-  display:flex;flex-direction:column;justify-content:flex-end;padding:12px;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:10px;
 }
 .gal-item:hover .gal-overlay{opacity:1}
-.gal-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gal-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gal-corner{
-  position:absolute;top:10px;right:10px;
+  position:absolute;top:8px;right:8px;
   background:rgba(0,0,0,.4);backdrop-filter:blur(4px);
-  border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-  color:rgba(255,255,255,.7);font-size:12px;
+  border-radius:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.7);font-size:11px;
+}
+.gal-posted{
+  position:absolute;top:8px;left:8px;
+  background:color-mix(in oklab,var(--success) 80%,rgba(0,0,0,.5));
+  border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;color:#fff;
+  letter-spacing:.04em;
 }
 .gal-del{
-  position:absolute;top:10px;left:10px;
+  position:absolute;bottom:8px;right:8px;
   background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
   border-radius:8px;padding:3px 8px;font-size:11px;color:rgba(255,255,255,.7);
   border:none;cursor:pointer;opacity:0;transition:opacity .2s,color .15s;
@@ -509,6 +515,58 @@ textarea.input-base{resize:vertical;min-height:88px}
 .gal-item:hover .gal-del{opacity:1}
 .gal-del:hover{color:#fff}
 .gal-item.selectable:hover{border-color:var(--success)}
+
+/* ─── DAY FOLDERS ─── */
+.day-folders{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+.day-folder-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);
+  background:linear-gradient(180deg,color-mix(in oklab,var(--surface) 90%,transparent),color-mix(in oklab,var(--surface) 70%,transparent));
+  backdrop-filter:blur(8px);}
+.day-folder-header{
+  display:flex;align-items:center;gap:16px;padding:16px 20px;cursor:pointer;
+  transition:background .15s;
+}
+.day-folder-header:hover{background:rgba(255,255,255,.03)}
+.day-folder-icon{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 20%,transparent);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.day-folder-info{flex:1;min-width:0}
+.day-folder-date{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.day-folder-sub{font-size:12px;color:var(--muted-fg);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.day-folder-right{display:flex;align-items:center;gap:8px}
+.badge-posted{
+  display:inline-flex;align-items:center;gap:4px;border-radius:99px;
+  background:color-mix(in oklab,var(--success) 10%,transparent);
+  border:1px solid color-mix(in oklab,var(--success) 25%,transparent);
+  color:var(--success);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 8px;
+}
+.badge-pending{
+  display:inline-flex;align-items:center;gap:4px;border-radius:99px;
+  background:color-mix(in oklab,var(--warn) 10%,transparent);
+  border:1px solid color-mix(in oklab,var(--warn) 25%,transparent);
+  color:var(--warn);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 8px;
+}
+.day-chevron{transition:transform .2s;color:var(--muted-fg)}
+.day-folder-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
+.day-folder-body.open{display:block}
+.day-upload-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin-bottom:12px}
+.day-upload-label{
+  display:inline-flex;align-items:center;gap:6px;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 25%,transparent);
+  color:var(--primary);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  transition:background .15s;white-space:nowrap;
+}
+.day-upload-label:hover{background:color-mix(in oklab,var(--primary) 20%,transparent)}
+.day-camp-sel{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted-fg);
+  background:var(--input-bg);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;color-scheme:dark;
+}
 
 /* STORAGE BAR */
 .storage-card{padding:20px;margin-bottom:24px}
@@ -737,36 +795,54 @@ svg.ico{display:block;flex-shrink:0}
 <!-- ═══════════ GALLERY VIEW ═══════════ -->
 <div id="galleryView" style="display:none">
 <main>
-  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:40px">
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:32px">
     <div>
-      <div class="page-eyebrow" style="margin-bottom:12px">Banco de mídias</div>
+      <div class="page-eyebrow" style="margin-bottom:12px"><span class="eyebrow-dot"></span>Banco de mídias por dia</div>
       <h1 class="page-h1">Galeria</h1>
-      <p class="page-desc">Imagens disponíveis para as campanhas. Suba uma vez, use em qualquer canal.</p>
+      <p class="page-desc">Organize fotos por dia. O sistema posta automaticamente a próxima foto disponível de cada pasta.</p>
     </div>
-    <label class="btn-grad" style="cursor:pointer">
-      <svg viewBox="0 0 24 24" class="ico" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-      Enviar mídia
-      <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToGallery(event)"/>
-    </label>
+    <button class="btn-grad" onclick="openNewDayModal()">
+      <svg viewBox="0 0 24 24" class="ico" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Novo Dia
+    </button>
   </div>
 
-  <div class="card storage-card">
-    <div class="storage-row">
-      <span>Armazenamento usado</span>
-      <span id="storageText">— / 1 GB</span>
+  <!-- Filtro de campanha -->
+  <div class="card" style="padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--muted-fg);font-weight:500;white-space:nowrap">Ver status de:</span>
+    <select id="galCampSel" class="day-camp-sel" style="flex:1;min-width:180px" onchange="loadMedia()">
+      <option value="">— Nenhuma campanha —</option>
+    </select>
+    <div class="storage-row" style="margin:0;white-space:nowrap">
+      <span id="storageText" style="font-size:12px;color:var(--muted-fg)">— / 1 GB</span>
     </div>
-    <div class="storage-track"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
+    <div class="storage-track" style="flex:1;min-width:100px"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
   </div>
 
-  <div id="galleryGrid" class="gallery-grid"></div>
+  <div id="dayFolders" class="day-folders"></div>
 </main>
+</div>
+
+<!-- ═══════════ NEW DAY MODAL ═══════════ -->
+<div class="modal-overlay" id="newDayModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Criar pasta de dia</div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label">Data</label></div>
+      <input type="date" id="newDayInput" class="input-base"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeNewDayModal()">Cancelar</button>
+      <button class="btn-grad" onclick="createDayFolder()">Criar pasta</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ GALLERY PICKER ═══════════ -->
 <div class="modal-overlay" id="galleryPicker">
-  <div class="modal" style="max-width:700px;width:95vw">
+  <div class="modal" style="max-width:720px;width:95vw">
     <div class="modal-title">Escolher da galeria</div>
-    <div id="pickerGrid" class="gallery-grid" style="max-height:54vh;overflow-y:auto;padding-right:2px"></div>
+    <div id="pickerDayList" style="display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;padding-right:2px"></div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeGalleryPicker()">Cancelar</button>
     </div>
@@ -855,8 +931,20 @@ function setNav(id){
   if(el) el.classList.add('active');
 }
 
-// ─── GALLERY ───
-let galleryFiles=[];
+// ─── GALLERY (day-folder system) ───
+let galleryDays=[];
+
+function fmtBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function fmtDay(iso){ // "2026-06-25" → "25/06/2026 (Quarta)"
+  const [y,m,d]=iso.split('-');
+  const dt=new Date(Number(y),Number(m)-1,Number(d));
+  const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  return `${d}/${m}/${y} (${days[dt.getDay()]})`;
+}
 
 async function showGallery(){
   setNav('gallery');stopLogTimer();
@@ -864,91 +952,164 @@ async function showGallery(){
   document.getElementById('editorView').style.display='none';
   document.getElementById('galleryView').style.display='block';
   document.title='Galeria · TeleFluxo';
+  // populate campaign selector
+  const sel=document.getElementById('galCampSel');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Nenhuma campanha —</option>';
+  campaigns.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${esc(c.name)}</option>`);
+  if(prev) sel.value=prev;
   await loadMedia();
 }
 
 async function loadMedia(){
-  const r=await fetch('/api/media');
+  const campId=document.getElementById('galCampSel')?.value||'';
+  const url=campId?`/api/media?campaign_id=${encodeURIComponent(campId)}`:'/api/media';
+  const r=await fetch(url);
   const data=await r.json();
-  galleryFiles=data.files||[];
-  renderGallery(data.total_bytes||0,data.limit_bytes||1073741824);
-}
-
-function fmtBytes(b){
-  if(b<1024) return b+' B';
-  if(b<1048576) return (b/1024).toFixed(1)+' KB';
-  return (b/1048576).toFixed(1)+' MB';
-}
-
-function renderGallery(total,limit){
+  galleryDays=data.days||[];
+  const total=data.total_bytes||0;
+  const limit=data.limit_bytes||1073741824;
   const pct=Math.min(100,(total/limit)*100);
   document.getElementById('storageText').textContent=fmtBytes(total)+' / '+fmtBytes(limit);
   const fill=document.getElementById('storageFill');
   fill.style.width=pct.toFixed(1)+'%';
   fill.style.background=pct>80?'var(--destructive)':'var(--primary)';
-  const grid=document.getElementById('galleryGrid');
-  if(!galleryFiles.length){
-    grid.innerHTML='<div class="empty"><div class="empty-icon">🖼️</div><h3>Galeria vazia</h3><p>Faça upload de imagens e vídeos para usar nos seus posts.</p></div>';
-    return;
-  }
-  grid.innerHTML=galleryFiles.map(f=>galItemHTML(f,false)).join('');
+  renderDayFolders();
 }
 
-function galItemHTML(f,selectable){
+function renderDayFolders(){
+  const container=document.getElementById('dayFolders');
+  if(!galleryDays.length){
+    container.innerHTML='<div class="empty"><div class="empty-icon">📁</div><h3>Nenhuma pasta criada</h3><p>Clique em "Novo Dia" para criar a primeira pasta.</p></div>';
+    return;
+  }
+  container.innerHTML=galleryDays.map((day,di)=>{
+    const pending=day.total-day.posted_count;
+    const badgePosted=day.posted_count?`<span class="badge-posted">✓ ${day.posted_count} postadas</span>`:'';
+    const badgePend=pending?`<span class="badge-pending">${pending} pendentes</span>`:'';
+    const filesHTML=day.files.length
+      ?day.files.map(f=>galItemHTML(f,false,day.day)).join('')
+      :'<p style="color:var(--muted-fg);font-size:12px;padding:12px 0">Nenhuma foto neste dia ainda.</p>';
+    return `<div class="day-folder-card" id="dayCard-${di}">
+      <div class="day-folder-header" onclick="toggleDay(${di})">
+        <div class="day-folder-icon">📅</div>
+        <div class="day-folder-info">
+          <div class="day-folder-date">${fmtDay(day.day)}</div>
+          <div class="day-folder-sub">${day.total} arquivo(s)</div>
+        </div>
+        <div class="day-folder-right">
+          ${badgePosted}${badgePend}
+          <label class="day-upload-label" onclick="event.stopPropagation()">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+            Adicionar fotos
+            <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToDay(event,'${day.day}')"/>
+          </label>
+          <svg class="day-chevron ico" id="chev-${di}" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="day-folder-body" id="dayBody-${di}">
+        <div class="gallery-grid">${filesHTML}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDay(di){
+  const body=document.getElementById('dayBody-'+di);
+  const chev=document.getElementById('chev-'+di);
+  const open=body.classList.toggle('open');
+  chev.style.transform=open?'rotate(180deg)':'';
+}
+
+function galItemHTML(f,selectable,dayPrefix){
   const isVid=/\.(mp4|mov|avi|webm)$/i.test(f.name);
   const media=isVid
     ?`<video src="${esc(f.url)}" preload="none" style="width:100%;height:100%;object-fit:cover"></video>`
     :`<img src="${esc(f.url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`;
-  const click=selectable?`onclick="pickMedia('${f.url.replace(/'/g,"\\'")}','${f.name.replace(/'/g,"\\'")}')"`:'';
-  const del=!selectable?`<button class="gal-del" onclick="deleteMedia('${f.name.replace(/'/g,"\\'")}',event)">🗑</button>`:'';
-  const shortName=f.name.length>20?f.name.slice(0,17)+'…':f.name;
+  const safePath=(f.path||f.name).replace(/'/g,"\\'");
+  const safeName=(f.name).replace(/'/g,"\\'");
+  const safeUrl=(f.url).replace(/'/g,"\\'");
+  const click=selectable?`onclick="pickMedia('${safeUrl}','${safeName}')"`:'';
+  const del=!selectable?`<button class="gal-del" onclick="deleteMedia('${safePath}',event)">🗑</button>`:'';
+  const posted=f.posted?`<div class="gal-posted">✓ postada</div>`:'';
+  const shortName=f.name.length>18?f.name.slice(0,15)+'…':f.name;
   return `<div class="gal-item${selectable?' selectable':''}" ${click}>
     ${media}
+    ${posted}
     <div class="gal-overlay"><span class="gal-name">${esc(shortName)}</span></div>
     <div class="gal-corner">${isVid?'🎬':'🖼'}</div>
     ${del}
   </div>`;
 }
 
-async function uploadToGallery(e){
+async function uploadToDay(e,day){
   const files=Array.from(e.target.files);if(!files.length) return;
-  showToast(`Enviando ${files.length} arquivo(s)…`,'info');
-  for(const file of files){const fd=new FormData();fd.append('file',file);await fetch('/api/upload',{method:'POST',body:fd});}
+  showToast(`Enviando ${files.length} foto(s) para ${day}…`,'info');
+  for(const file of files){
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('day',day);
+    await fetch('/api/upload',{method:'POST',body:fd});
+  }
   await loadMedia();showToast('Upload concluído!','success');e.target.value='';
 }
 
-async function deleteMedia(name,e){
+async function deleteMedia(path,e){
   e.stopPropagation();
-  if(!confirm('Excluir este arquivo da galeria?')) return;
-  await fetch('/api/media/'+encodeURIComponent(name),{method:'DELETE'});
+  if(!confirm('Excluir este arquivo?')) return;
+  await fetch('/api/media/'+path,{method:'DELETE'});
   await loadMedia();showToast('Arquivo excluído','error');
 }
 
-// ─── GALLERY PICKER ───
-function openGalleryPicker(){
-  const grid=document.getElementById('pickerGrid');
-  if(!galleryFiles.length){
-    fetch('/api/media').then(r=>r.json()).then(d=>{galleryFiles=d.files||[];renderPickerGrid(grid);});
-  } else renderPickerGrid(grid);
-  document.getElementById('galleryPicker').classList.add('open');
+// ─── NEW DAY MODAL ───
+function openNewDayModal(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('newDayInput').value=today;
+  document.getElementById('newDayModal').classList.add('open');
 }
-function renderPickerGrid(grid){
-  if(!galleryFiles.length){grid.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted-fg)">Galeria vazia.</div>';return;}
-  grid.innerHTML=galleryFiles.map(f=>galItemHTML(f,true)).join('');
+function closeNewDayModal(){document.getElementById('newDayModal').classList.remove('open');}
+async function createDayFolder(){
+  const day=document.getElementById('newDayInput').value;
+  if(!day){showToast('Selecione uma data','error');return;}
+  const r=await fetch('/api/media/days',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day})});
+  const data=await r.json();
+  closeNewDayModal();
+  await loadMedia();
+  // auto-expand the new day
+  const idx=galleryDays.findIndex(d=>d.day===day);
+  if(idx>=0) toggleDay(idx);
+  showToast('Pasta criada!','success');
+}
+
+// ─── GALLERY PICKER (for schedule slots) ───
+async function openGalleryPicker(){
+  const r=await fetch('/api/media');
+  const data=await r.json();
+  const allDays=data.days||[];
+  const container=document.getElementById('pickerDayList');
+  if(!allDays.length||!allDays.some(d=>d.files.length)){
+    container.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted-fg)">Galeria vazia.</div>';
+  } else {
+    container.innerHTML=allDays.map((day,di)=>{
+      if(!day.files.length) return '';
+      return `<div style="margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted-fg);margin-bottom:8px;padding:0 2px">${fmtDay(day.day)}</div>
+        <div class="gallery-grid">${day.files.map(f=>galItemHTML(f,true,day.day)).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('galleryPicker').classList.add('open');
 }
 function pickMedia(url,name){
   if(activePickerIdx!==null){
-    // picking for a slot row
     const idx=activePickerIdx;activePickerIdx=null;
     if(schedules[idx]){schedules[idx].media_path=url;schedules[idx].media_name=name;}
     closeGalleryPicker();
     renderSchedules();
-    // re-open the expand after re-render
     expandedSlots.add(idx);
     renderSchedules();
     showToast('Mídia selecionada!','success');
   } else {
-    // picking for the add-schedule modal
     pendingPath=url;pendingName=name;
     const prev=document.getElementById('mPreviews');prev.innerHTML='';
     const isVid=/\.(mp4|mov|avi|webm)$/i.test(name);
