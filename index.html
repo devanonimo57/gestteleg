@@ -605,32 +605,6 @@ textarea.input-base{resize:vertical;min-height:88px}
 .gen-progress{height:2px;background:rgba(255,255,255,.08);border-radius:1px;margin:12px 0;display:none}
 .gen-bar{height:2px;background:linear-gradient(90deg,var(--primary),var(--primary-glow));border-radius:1px;transition:width .3s}
 
-/* ─── GEN OVERLAY ─── */
-#genOverlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);
-  display:none;align-items:center;justify-content:center;
-  z-index:9999;backdrop-filter:blur(6px);
-}
-.gen-ov-box{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:20px;padding:36px 44px;text-align:center;
-  min-width:320px;max-width:400px;
-  box-shadow:0 24px 60px rgba(0,0,0,.5);
-}
-.gen-ov-spinner{
-  width:44px;height:44px;
-  border:3px solid oklch(0.35 0.02 285);
-  border-top-color:var(--primary);
-  border-radius:50%;
-  animation:spin .75s linear infinite;
-  margin:0 auto 20px;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-.gen-ov-title{font-size:17px;font-weight:600;color:var(--foreground);margin-bottom:6px}
-.gen-ov-sub{font-size:13px;color:var(--muted-fg);margin-bottom:22px;min-height:18px}
-.gen-ov-track{background:oklch(0.25 0.015 285);border-radius:8px;height:8px;overflow:hidden;margin-bottom:10px}
-.gen-ov-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-glow));border-radius:8px;transition:width .4s ease}
-.gen-ov-count{font-size:12px;color:oklch(0.5 0.015 285)}
 
 /* ─── TOAST ─── */
 #toast{
@@ -1470,82 +1444,24 @@ async function generateDay(){
   if(schedules.length>0&&!confirm(`Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`)) return;
   const btn=document.getElementById('genDayBtn');
   btn.disabled=true;
-  schedules=[];
-  campaignDays[selectedDay]={slots:[]};
-  renderSchedules();
-  showGenOverlay();
+  btn.textContent='⏳ Gerando…';
+  const prog=document.getElementById('genProgress');const bar=document.getElementById('genBar');
+  prog.style.display='block';bar.style.width='15%';
+  showToast(`Gerando dia ${selectedDay}`+(xai?' com Grok':'')+'…','info');
   try{
-    const resp=await fetch('/api/generate-day',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({persona,xai_key:xai,day:selectedDay}),
-    });
-    const reader=resp.body.getReader();
-    const dec=new TextDecoder();
-    let buf='';
-    while(true){
-      const{done,value}=await reader.read();
-      if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      const lines=buf.split('\n');
-      buf=lines.pop();
-      for(const line of lines){
-        if(!line.startsWith('data: ')) continue;
-        let data;
-        try{data=JSON.parse(line.slice(6));}catch{continue;}
-        if(data._done){
-          await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
-          buildDayNav();
-          hideGenOverlay();
-          showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
-          break;
-        }
-        const{_progress,...slot}=data;
-        slot._idx=schedules.length;
-        schedules.push(slot);
-        schedules.sort((a,b)=>a.time.localeCompare(b.time));
-        campaignDays[selectedDay].slots=[...schedules];
-        renderSchedules();
-        updateGenOverlay(_progress.done,_progress.total,slot.type);
-      }
-    }
-  }catch(e){
-    showToast('Erro de conexão','error');
-    hideGenOverlay();
-  }
+    const r=await api('POST','/generate-day',{persona,xai_key:xai,day:selectedDay});
+    bar.style.width='100%';
+    if(r.ok){
+      schedules=r.slots.map((s,i)=>({...s,_idx:i}));
+      campaignDays[selectedDay]={slots:[...schedules]};
+      await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
+      renderSchedules();buildDayNav();
+      showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+    } else showToast('Erro ao gerar dia','error');
+  }catch(e){showToast('Erro de conexão','error');}
   btn.disabled=false;
-}
-
-function showGenOverlay(){
-  let ov=document.getElementById('genOverlay');
-  if(!ov){
-    ov=document.createElement('div');
-    ov.id='genOverlay';
-    ov.innerHTML=`<div class="gen-ov-box">
-      <div class="gen-ov-spinner"></div>
-      <div class="gen-ov-title">Gerando dia com IA</div>
-      <div class="gen-ov-sub" id="genOvSub">Conectando ao Grok…</div>
-      <div class="gen-ov-track"><div class="gen-ov-fill" id="genOvFill" style="width:0%"></div></div>
-      <div class="gen-ov-count" id="genOvCount">0 / 24 slots</div>
-    </div>`;
-    document.body.appendChild(ov);
-  }
-  ov.style.display='flex';
-  document.getElementById('genOvFill').style.width='0%';
-  document.getElementById('genOvCount').textContent='0 / 24 slots';
-  document.getElementById('genOvSub').textContent='Conectando ao Grok…';
-}
-
-function updateGenOverlay(done,total,type){
-  const labels={image:'🖼️ Imagem',video:'🎬 Vídeo',text:'✍️ Texto',poll:'📊 Enquete'};
-  document.getElementById('genOvFill').style.width=Math.round(done/total*100)+'%';
-  document.getElementById('genOvCount').textContent=`${done} / ${total} slots`;
-  document.getElementById('genOvSub').textContent=`Aguardando Grok · ${labels[type]||type}`;
-}
-
-function hideGenOverlay(){
-  const ov=document.getElementById('genOverlay');
-  if(ov) ov.style.display='none';
+  btn.innerHTML='<svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Gerar dia completo com IA';
+  setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
 }
 
 // ─── DAY NAVIGATOR ───
