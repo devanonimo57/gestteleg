@@ -19,15 +19,6 @@ scheduler.start()
 MAX_RETRIES  = 5
 RETRY_DELAYS = [5, 10, 30, 60, 120]
 
-DEFAULT_DAY_TYPES = [
-    "image","reaction","image","poll",
-    "image","image","reaction","image",
-    "image","poll","image","reaction",
-    "image","image","reaction","image",
-    "image","poll","image","image",
-    "reaction","image","image","reaction",
-]
-
 # ---------- Banco de dados ----------
 
 def load_data():
@@ -51,49 +42,11 @@ def save_data(campaigns):
     except Exception as e:
         print(f"[DB] save_data error: {e}")
 
-# ---------- Helpers de mídia por dia ----------
-
-def pick_next_media(campaign, date):
-    """Retorna a próxima foto não postada da pasta do dia."""
-    sb = get_sb()
-    try:
-        day_files = sb.storage.from_(BUCKET).list(path=date) or []
-    except Exception as e:
-        print(f"[MEDIA] Erro ao listar pasta {date}: {e}")
-        return None
-
-    files = sorted(
-        [f for f in day_files if f.get("name") and not f["name"].startswith(".")],
-        key=lambda f: f.get("name", "")
-    )
-    if not files:
-        return None
-
-    posted = set(campaign.get("media_posted", {}).get(date, []))
-    for f in files:
-        if f["name"] not in posted:
-            full_path = f"{date}/{f['name']}"
-            url = sb.storage.from_(BUCKET).get_public_url(full_path)
-            return {"name": f["name"], "path": full_path, "url": url}
-
-    return None  # Todas as fotos já foram postadas
-
-def mark_media_posted(campaign_id, date, filename):
-    """Marca uma foto como postada no histórico da campanha."""
-    campaigns = load_data()
-    for c in campaigns:
-        if c["id"] == campaign_id:
-            mp = c.setdefault("media_posted", {})
-            mp.setdefault(date, [])
-            if filename not in mp[date]:
-                mp[date].append(filename)
-    save_data(campaigns)
-
 # ---------- Geração de conteúdo (Grok) ----------
 
 def generate_copy(persona, post_type, xai_key):
     if not xai_key:
-        return "", "Chave Grok/xAI nao informada"
+        return "", "Chave Grok/xAI não informada"
 
     type_hints = {
         "image":    "uma legenda curta e envolvente para uma imagem",
@@ -146,26 +99,14 @@ def send_text(token, chat_id, text):
         json={"chat_id": chat_id, "text": text}, timeout=20)
     return r.json()
 
-def send_photo(token, chat_id, path_or_url, caption=""):
-    if path_or_url.startswith("http"):
-        r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
-            json={"chat_id": chat_id, "photo": path_or_url, "caption": caption}, timeout=30)
-    else:
-        with open(path_or_url, "rb") as f:
-            r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
-                data={"chat_id": chat_id, "caption": caption},
-                files={"photo": f}, timeout=30)
+def send_photo(token, chat_id, url, caption=""):
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendPhoto",
+        json={"chat_id": chat_id, "photo": url, "caption": caption}, timeout=30)
     return r.json()
 
-def send_video(token, chat_id, path_or_url, caption=""):
-    if path_or_url.startswith("http"):
-        r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo",
-            json={"chat_id": chat_id, "video": path_or_url, "caption": caption}, timeout=60)
-    else:
-        with open(path_or_url, "rb") as f:
-            r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo",
-                data={"chat_id": chat_id, "caption": caption},
-                files={"video": f}, timeout=60)
+def send_video(token, chat_id, url, caption=""):
+    r = requests.post(f"https://api.telegram.org/bot{token}/sendVideo",
+        json={"chat_id": chat_id, "video": url, "caption": caption}, timeout=60)
     return r.json()
 
 def send_poll(token, chat_id, question, options):
@@ -173,159 +114,104 @@ def send_poll(token, chat_id, question, options):
         json={"chat_id": chat_id, "question": question, "options": options}, timeout=20)
     return r.json()
 
-# ---------- Envio automático ----------
+# ---------- Execução ----------
 
-def execute_schedule(campaign_id, schedule_id):
+def execute_schedule(campaign_id, hour, minute):
     campaigns = load_data()
     campaign  = next((c for c in campaigns if c["id"] == campaign_id), None)
     if not campaign or not campaign.get("active"):
         return
-    schedule = next((s for s in campaign.get("schedules", []) if s["id"] == schedule_id), None)
-    if not schedule:
+
+    today    = datetime.now().strftime("%Y-%m-%d")
+    time_str = f"{hour:02d}:{minute:02d}"
+
+    day_data = campaign.get("days", {}).get(today, {})
+    slots    = day_data.get("slots", [])
+    slot     = next((s for s in slots if s.get("time") == time_str), None)
+
+    if not slot:
+        print(f"[SKIP] {campaign_id[:8]} {today} {time_str} — sem slot configurado")
         return
 
+    _run_slot(campaign, slot, today)
+
+def _run_slot(campaign, slot, day):
     token   = campaign["token"]
     chat_id = campaign["chat"]
-    stype   = schedule.get("type", "text")
-    xai_key = campaign.get("xai_key", "")
-    persona = campaign.get("persona", "")
-    today   = datetime.now().strftime("%Y-%m-%d")
+    stype   = slot.get("type", "text")
+    msg     = slot.get("msg", "").strip()
+    media   = slot.get("media_path", "").strip()
 
-    print(f"[SEND] {stype} | campaign={campaign_id[:8]} | {today}")
+    print(f"[SEND] {stype} | {day} {slot.get('time')} | campaign={campaign['id'][:8]}")
 
-    # ── Imagem / Vídeo ──────────────────────────────────────────
-    if stype in ("image", "video"):
-        media = pick_next_media(campaign, today)
-        if not media:
-            detail = f"Sem fotos disponíveis na pasta {today}"
-            print(f"[SEND] {detail}")
-            log_entry(campaign_id, schedule_id, False, detail)
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            result = _dispatch(token, chat_id, stype, media, msg)
+            ok     = result.get("ok", False)
+            detail = result.get("description", "Enviado" if ok else "Erro")
+            log_entry(campaign["id"], slot["id"], ok, detail, attempt)
             return
+        except requests.exceptions.Timeout:
+            log_entry(campaign["id"], slot["id"], False, f"Timeout tentativa {attempt}", attempt)
+        except Exception as e:
+            log_entry(campaign["id"], slot["id"], False, str(e)[:80], attempt)
+        if attempt < MAX_RETRIES:
+            time.sleep(RETRY_DELAYS[attempt - 1])
 
-        # Gera legenda com Grok (se configurado)
-        caption = ""
-        if xai_key and persona:
-            caption, err = generate_copy(persona, stype, xai_key)
-            if err:
-                print(f"[GROK] {err}")
-
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                if stype == "image":
-                    result = send_photo(token, chat_id, media["url"], caption)
-                else:
-                    result = send_video(token, chat_id, media["url"], caption)
-                ok     = result.get("ok", False)
-                detail = result.get("description", "Enviado" if ok else "Erro")
-                if ok:
-                    mark_media_posted(campaign_id, today, media["name"])
-                log_entry(campaign_id, schedule_id, ok, detail, attempt)
-                return
-            except requests.exceptions.Timeout:
-                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
-            except Exception as e:
-                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAYS[attempt - 1])
-        return
-
-    # ── Reação / Texto ──────────────────────────────────────────
-    if stype in ("reaction", "text"):
-        msg = schedule.get("msg", "").strip()
-        if not msg:
-            if xai_key and persona:
-                msg, err = generate_copy(persona, stype, xai_key)
-                if err:
-                    print(f"[GROK] {err}")
-            if not msg:
-                msg = "Post agendado"
-
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                result = send_text(token, chat_id, msg)
-                ok     = result.get("ok", False)
-                detail = result.get("description", "Enviado" if ok else "Erro")
-                log_entry(campaign_id, schedule_id, ok, detail, attempt)
-                return
-            except requests.exceptions.Timeout:
-                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
-            except Exception as e:
-                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAYS[attempt - 1])
-        return
-
-    # ── Enquete ─────────────────────────────────────────────────
-    if stype == "poll":
-        msg = schedule.get("msg", "").strip()
-        if not msg:
-            if xai_key and persona:
-                msg, err = generate_copy(persona, "poll", xai_key)
-                if err:
-                    print(f"[GROK] {err}")
-
+def _dispatch(token, chat_id, stype, media, msg):
+    if stype in ("image", "video"):
+        if not media:
+            return {"ok": False, "description": "Sem mídia configurada"}
+        if stype == "image":
+            return send_photo(token, chat_id, media, msg)
+        else:
+            return send_video(token, chat_id, media, msg)
+    elif stype == "poll":
         lines    = [l.strip() for l in msg.split("\n") if l.strip()]
         question = lines[0] if lines else "O que você acha?"
         options  = lines[1:5] if len(lines) > 1 else ["Sim", "Não"]
+        return send_poll(token, chat_id, question, options)
+    else:
+        return send_text(token, chat_id, msg or ".")
 
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                result = send_poll(token, chat_id, question, options)
-                ok     = result.get("ok", False)
-                detail = result.get("description", "Enviado" if ok else "Erro")
-                log_entry(campaign_id, schedule_id, ok, detail, attempt)
-                return
-            except requests.exceptions.Timeout:
-                log_entry(campaign_id, schedule_id, False, f"Timeout tentativa {attempt}", attempt)
-            except Exception as e:
-                log_entry(campaign_id, schedule_id, False, str(e)[:80], attempt)
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAYS[attempt - 1])
-
-def log_entry(campaign_id, schedule_id, success, detail, attempt=1):
+def log_entry(campaign_id, slot_id, success, detail, attempt=1):
     campaigns = load_data()
     for c in campaigns:
         if c["id"] == campaign_id:
             c.setdefault("logs", []).insert(0, {
-                "schedule_id": schedule_id,
-                "time":        datetime.now().isoformat(),
-                "success":     success,
-                "detail":      detail,
-                "attempt":     attempt,
+                "slot_id": slot_id,
+                "time":    datetime.now().isoformat(),
+                "success": success,
+                "detail":  detail,
+                "attempt": attempt,
             })
             c["logs"] = c["logs"][:100]
     save_data(campaigns)
-
-def build_default_schedules():
-    return [{
-        "id":         str(uuid.uuid4()),
-        "time":       f"{hour:02d}:00",
-        "type":       stype,
-        "msg":        "",
-        "media_path": "",
-        "media_name": "",
-    } for hour, stype in enumerate(DEFAULT_DAY_TYPES)]
 
 def register_all_jobs():
     scheduler.remove_all_jobs()
     for c in load_data():
         if not c.get("active"):
             continue
-        for s in c.get("schedules", []):
-            t = s.get("time", "")
-            if not t or ":" not in t:
-                continue
-            h, m = map(int, t.split(":"))
-            scheduler.add_job(
-                execute_schedule, "cron", hour=h, minute=m,
-                args=[c["id"], s["id"]],
-                id=f"{c['id']}_{s['id']}",
-                replace_existing=True,
-            )
+        seen = set()
+        for day_data in c.get("days", {}).values():
+            for s in day_data.get("slots", []):
+                t = s.get("time", "")
+                if not t or ":" not in t or t in seen:
+                    continue
+                seen.add(t)
+                h, m = map(int, t.split(":"))
+                job_id = f"{c['id']}_{h:02d}{m:02d}"
+                scheduler.add_job(
+                    execute_schedule, "cron", hour=h, minute=m,
+                    args=[c["id"], h, m],
+                    id=job_id,
+                    replace_existing=True,
+                )
 
 register_all_jobs()
 
-# ---------- Rotas ----------
+# ---------- Rotas base ----------
 
 @app.route("/api/ping")
 def ping():
@@ -338,14 +224,11 @@ def get_campaigns():
 @app.route("/api/campaigns", methods=["POST"])
 def create_campaign():
     data = request.json
-    data["id"]           = str(uuid.uuid4())
-    data["createdAt"]    = datetime.now().isoformat()
-    data["logs"]         = []
-    data["media_posted"] = {}
-    data["xai_key"]      = data.get("xai_key", "")
-    data.setdefault("schedules", [])
-    for s in data["schedules"]:
-        s.setdefault("id", str(uuid.uuid4()))
+    data["id"]        = str(uuid.uuid4())
+    data["createdAt"] = datetime.now().isoformat()
+    data["logs"]      = []
+    data["xai_key"]   = data.get("xai_key", "")
+    data.setdefault("days", {})
     campaigns = load_data()
     campaigns.append(data)
     save_data(campaigns)
@@ -358,14 +241,11 @@ def update_campaign(cid):
     campaigns = load_data()
     for i, c in enumerate(campaigns):
         if c["id"] == cid:
-            body["id"]           = cid
-            body["createdAt"]    = c.get("createdAt", datetime.now().isoformat())
-            body["logs"]         = c.get("logs", [])
-            body["media_posted"] = c.get("media_posted", {})
-            body["xai_key"]      = body.get("xai_key", "")
-            body.setdefault("schedules", [])
-            for s in body["schedules"]:
-                s.setdefault("id", str(uuid.uuid4()))
+            body["id"]        = cid
+            body["createdAt"] = c.get("createdAt", datetime.now().isoformat())
+            body["logs"]      = c.get("logs", [])
+            body["xai_key"]   = body.get("xai_key", "")
+            body.setdefault("days", c.get("days", {}))
             campaigns[i] = body
             save_data(campaigns)
             register_all_jobs()
@@ -384,7 +264,7 @@ def test_campaign(cid):
     campaigns = load_data()
     c = next((x for x in campaigns if x["id"] == cid), None)
     if not c:
-        return jsonify({"ok": False, "error": "Campanha nao encontrada"}), 404
+        return jsonify({"ok": False, "error": "Campanha não encontrada"}), 404
     try:
         result = send_text(c["token"], c["chat"], "✅ Teste de conexão — bot funcionando!")
         ok     = result.get("ok", False)
@@ -392,10 +272,90 @@ def test_campaign(cid):
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
-@app.route("/api/campaigns/<cid>/send-now/<sid>", methods=["POST"])
-def send_now(cid, sid):
+# ---------- Dias da campanha ----------
+
+@app.route("/api/campaigns/<cid>/days", methods=["POST"])
+def create_campaign_day(cid):
+    """Cria um dia na campanha E a pasta no Storage."""
+    day = (request.json or {}).get("day", "").strip()
+    if not day:
+        return jsonify({"error": "day required"}), 400
+
+    campaigns = load_data()
+    c = next((x for x in campaigns if x["id"] == cid), None)
+    if not c:
+        return jsonify({"error": "not found"}), 404
+
+    # Cria entrada no campaign.days se não existir
+    c.setdefault("days", {})
+    if day not in c["days"]:
+        c["days"][day] = {"slots": []}
+    save_data(campaigns)
+
+    # Cria pasta no Supabase Storage
+    sb = get_sb()
+    try:
+        sb.storage.from_(BUCKET).upload(
+            path=f"{day}/.keep",
+            file=b"",
+            file_options={"content-type": "text/plain", "upsert": "true"}
+        )
+    except Exception:
+        pass
+
+    register_all_jobs()
+    return jsonify({"ok": True, "day": day})
+
+@app.route("/api/campaigns/<cid>/days/<day>", methods=["GET"])
+def get_campaign_day(cid, day):
+    campaigns = load_data()
+    c = next((x for x in campaigns if x["id"] == cid), None)
+    if not c:
+        return jsonify({"error": "not found"}), 404
+    day_data = c.get("days", {}).get(day, {"slots": []})
+    return jsonify(day_data)
+
+@app.route("/api/campaigns/<cid>/days/<day>", methods=["PUT"])
+def save_campaign_day(cid, day):
+    """Salva os slots de um dia específico."""
+    body      = request.json or {}
+    slots     = body.get("slots", [])
+    campaigns = load_data()
+    for c in campaigns:
+        if c["id"] == cid:
+            c.setdefault("days", {})
+            c["days"][day] = {"slots": slots}
+            save_data(campaigns)
+            register_all_jobs()
+            return jsonify({"ok": True})
+    return jsonify({"error": "not found"}), 404
+
+@app.route("/api/campaigns/<cid>/days/<day>", methods=["DELETE"])
+def delete_campaign_day(cid, day):
+    """Remove o dia da campanha (não apaga as fotos da galeria)."""
+    campaigns = load_data()
+    for c in campaigns:
+        if c["id"] == cid:
+            c.get("days", {}).pop(day, None)
+            save_data(campaigns)
+            register_all_jobs()
+            return jsonify({"ok": True})
+    return jsonify({"error": "not found"}), 404
+
+@app.route("/api/campaigns/<cid>/days/<day>/send-now", methods=["POST"])
+def send_now_slot(cid, day):
+    """Envia um slot específico imediatamente."""
+    slot_id = (request.json or {}).get("slot_id", "")
+    campaigns = load_data()
+    c = next((x for x in campaigns if x["id"] == cid), None)
+    if not c:
+        return jsonify({"error": "not found"}), 404
+    slots = c.get("days", {}).get(day, {}).get("slots", [])
+    slot  = next((s for s in slots if s["id"] == slot_id), None)
+    if not slot:
+        return jsonify({"error": "slot not found"}), 404
     import threading
-    threading.Thread(target=execute_schedule, args=(cid, sid), daemon=True).start()
+    threading.Thread(target=_run_slot, args=(c, slot, day), daemon=True).start()
     return jsonify({"ok": True})
 
 @app.route("/api/campaigns/<cid>/logs", methods=["GET"])
@@ -409,7 +369,7 @@ def get_logs(cid):
 @app.route("/api/upload", methods=["POST"])
 def upload_file():
     f   = request.files.get("file")
-    day = request.form.get("day", "").strip()   # YYYY-MM-DD opcional
+    day = request.form.get("day", "").strip()
     if not f:
         return jsonify({"error": "no file"}), 400
     ext          = os.path.splitext(f.filename)[1]
@@ -423,13 +383,12 @@ def upload_file():
         file_options={"content-type": f.content_type or "application/octet-stream"}
     )
     public_url = sb.storage.from_(BUCKET).get_public_url(storage_path)
-    return jsonify({"path": public_url, "name": f.filename, "storage_name": unique_name})
+    return jsonify({"path": storage_path, "url": public_url, "name": f.filename, "storage_name": unique_name})
 
-# ---------- Galeria por dia ----------
+# ---------- Galeria ----------
 
 @app.route("/api/media/days", methods=["POST"])
-def create_day():
-    """Cria uma pasta de dia no Storage com um arquivo .keep."""
+def create_storage_day():
     day = (request.json or {}).get("day", "").strip()
     if not day:
         return jsonify({"error": "day required"}), 400
@@ -441,7 +400,7 @@ def create_day():
             file_options={"content-type": "text/plain", "upsert": "true"}
         )
     except Exception:
-        pass  # Pasta já existe
+        pass
     return jsonify({"ok": True, "day": day})
 
 @app.route("/api/media", methods=["GET"])
@@ -449,41 +408,22 @@ def list_media():
     campaign_id = request.args.get("campaign_id", "")
     real_sb     = get_sb()
 
-    # Posted map para esta campanha
     posted_by_day = {}
     if campaign_id:
         campaigns = load_data()
         c = next((x for x in campaigns if x["id"] == campaign_id), None)
         if c:
-            posted_by_day = c.get("media_posted", {})
+            for day, day_data in c.get("days", {}).items():
+                used = [s.get("media_path","") for s in day_data.get("slots",[]) if s.get("media_path")]
+                posted_by_day[day] = set(used)
 
     total_bytes = 0
     days_result = []
-    root_files  = []
+    root_items  = real_sb.storage.from_(BUCKET).list() or []
+    day_folders = [item.get("name") for item in root_items if item.get("metadata") is None and item.get("name")]
 
-    root_items = real_sb.storage.from_(BUCKET).list() or []
-    day_folders = []
-
-    for item in root_items:
-        name = item.get("name", "")
-        if not name:
-            continue
-        meta = item.get("metadata")
-        if meta is None:
-            # É uma "pasta" (dia)
-            day_folders.append(name)
-        elif not name.startswith("."):
-            size = meta.get("size") or 0
-            total_bytes += size
-            root_files.append({
-                "name": name, "size": size,
-                "url": real_sb.storage.from_(BUCKET).get_public_url(name),
-                "posted": False,
-            })
-
-    # Lista arquivos de cada pasta de dia
     for day in sorted(day_folders, reverse=True):
-        posted_set = set(posted_by_day.get(day, []))
+        posted_set = posted_by_day.get(day, set())
         try:
             day_items = real_sb.storage.from_(BUCKET).list(path=day) or []
         except Exception:
@@ -497,24 +437,24 @@ def list_media():
             meta = f.get("metadata") or {}
             size = meta.get("size") or 0
             total_bytes += size
+            full_path = f"{day}/{fname}"
             files.append({
-                "name":    fname,
-                "path":    f"{day}/{fname}",
-                "size":    size,
-                "url":     real_sb.storage.from_(BUCKET).get_public_url(f"{day}/{fname}"),
-                "posted":  fname in posted_set,
+                "name":   fname,
+                "path":   full_path,
+                "size":   size,
+                "url":    real_sb.storage.from_(BUCKET).get_public_url(full_path),
+                "posted": full_path in posted_set,
             })
 
         days_result.append({
-            "day":           day,
-            "files":         files,
-            "total":         len(files),
-            "posted_count":  len([f for f in files if f["posted"]]),
+            "day":          day,
+            "files":        files,
+            "total":        len(files),
+            "posted_count": len([f for f in files if f["posted"]]),
         })
 
     return jsonify({
         "days":        days_result,
-        "root_files":  root_files,
         "total_bytes": total_bytes,
         "limit_bytes": 1_073_741_824,
     })
@@ -535,7 +475,7 @@ def validate_token():
         if data.get("ok"):
             bot = data["result"]
             return jsonify({"ok": True, "username": bot.get("username"), "name": bot.get("first_name")})
-        return jsonify({"ok": False, "error": data.get("description", "Token invalido")})
+        return jsonify({"ok": False, "error": data.get("description", "Token inválido")})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
 
@@ -546,25 +486,68 @@ def api_generate_copy():
     post_type = body.get("type", "image")
     xai_key   = body.get("xai_key", "")
     if not xai_key:
-        return jsonify({"ok": False, "error": "Chave Grok/xAI nao informada"}), 400
+        return jsonify({"ok": False, "error": "Chave Grok/xAI não informada"}), 400
     copy, error = generate_copy(persona, post_type, xai_key)
     return jsonify({"ok": bool(copy), "copy": copy, "error": error})
 
 @app.route("/api/generate-day", methods=["POST"])
 def api_generate_day():
+    """Gera slots para um dia específico com fotos da galeria + IA."""
     body    = request.json or {}
     persona = body.get("persona", "")
     xai_key = body.get("xai_key", "")
-    schedules = []
-    for hour, stype in enumerate(DEFAULT_DAY_TYPES):
+    day     = body.get("day", datetime.now().strftime("%Y-%m-%d"))
+
+    DAY_TYPES = [
+        "image","reaction","image","poll",
+        "image","image","reaction","image",
+        "image","poll","image","reaction",
+        "image","image","reaction","image",
+        "image","poll","image","image",
+        "reaction","image","image","reaction",
+    ]
+
+    # Busca fotos do dia na galeria
+    sb = get_sb()
+    try:
+        day_files = sb.storage.from_(BUCKET).list(path=day) or []
+    except Exception:
+        day_files = []
+    photos = sorted(
+        [f for f in day_files if f.get("name") and not f["name"].startswith(".")],
+        key=lambda f: f.get("name", "")
+    )
+    photo_idx = 0
+
+    slots = []
+    for hour, stype in enumerate(DAY_TYPES):
         msg = ""
-        if xai_key and persona:
-            msg, _ = generate_copy(persona, stype, xai_key)
-        schedules.append({
-            "id": str(uuid.uuid4()), "time": f"{hour:02d}:00",
-            "type": stype, "msg": msg, "media_path": "", "media_name": "",
+        media_path = ""
+        media_name = ""
+
+        if stype in ("image", "video"):
+            if photo_idx < len(photos):
+                fname      = photos[photo_idx]["name"]
+                full_path  = f"{day}/{fname}"
+                media_path = sb.storage.from_(BUCKET).get_public_url(full_path)
+                media_name = fname
+                photo_idx += 1
+            if xai_key and persona:
+                msg, _ = generate_copy(persona, stype, xai_key)
+        else:
+            if xai_key and persona:
+                msg, _ = generate_copy(persona, stype, xai_key)
+
+        slots.append({
+            "id":         str(uuid.uuid4()),
+            "time":       f"{hour:02d}:00",
+            "type":       stype,
+            "msg":        msg,
+            "media_path": media_path,
+            "media_name": media_name,
         })
-    return jsonify({"ok": True, "schedules": schedules})
+
+    return jsonify({"ok": True, "slots": slots, "day": day})
 
 @app.route("/")
 def index():
