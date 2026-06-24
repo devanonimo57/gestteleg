@@ -343,9 +343,8 @@ def create_campaign():
     data["logs"]         = []
     data["media_posted"] = {}
     data["xai_key"]      = data.get("xai_key", "")
-    if not data.get("schedules"):
-        data["schedules"] = build_default_schedules()
-    for s in data.get("schedules", []):
+    data.setdefault("schedules", [])
+    for s in data["schedules"]:
         s.setdefault("id", str(uuid.uuid4()))
     campaigns = load_data()
     campaigns.append(data)
@@ -364,9 +363,8 @@ def update_campaign(cid):
             body["logs"]         = c.get("logs", [])
             body["media_posted"] = c.get("media_posted", {})
             body["xai_key"]      = body.get("xai_key", "")
-            if not body.get("schedules"):
-                body["schedules"] = build_default_schedules()
-            for s in body.get("schedules", []):
+            body.setdefault("schedules", [])
+            for s in body["schedules"]:
                 s.setdefault("id", str(uuid.uuid4()))
             campaigns[i] = body
             save_data(campaigns)
