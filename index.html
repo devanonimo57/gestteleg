@@ -787,20 +787,30 @@ svg.ico{display:block;flex-shrink:0}
 
     <!-- RIGHT — Schedule -->
     <div class="card sched-panel" style="position:sticky;top:76px">
+
       <!-- Day navigator -->
-      <div id="dayNav" style="padding:16px 20px 0;border-bottom:1px solid var(--border);margin-bottom:0">
-        <div style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:10px">Selecionar dia</div>
-        <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;padding-bottom:14px">
-        <div id="dayNavChips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
-        <button onclick="addNextDay()" title="Adicionar próximo dia" style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:56px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted-fg);cursor:pointer;font-size:20px;transition:background .15s,color .15s;flex-shrink:0" onmouseover="this.style.background='rgba(255,255,255,.05)';this.style.color='var(--foreground)'" onmouseout="this.style.background='transparent';this.style.color='var(--muted-fg)'">+</button>
+      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-fg)">Dias configurados</span>
+          <button onclick="openAddDayModal()" style="display:inline-flex;align-items:center;gap:5px;border-radius:8px;border:1px solid color-mix(in oklab,var(--primary) 30%,transparent);background:color-mix(in oklab,var(--primary) 10%,transparent);color:var(--primary);padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer">
+            <svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Criar dia
+          </button>
+        </div>
+        <div id="dayNavChips" style="display:flex;gap:6px;flex-wrap:wrap">
+          <div style="font-size:12px;color:var(--muted-fg);padding:6px 0">Nenhum dia criado.</div>
+        </div>
       </div>
-      </div>
+
       <div class="sched-header">
         <div>
           <div class="sched-hdr-title">Cronograma</div>
-          <div class="sched-hdr-sub" id="schedDayLabel">Horários do dia</div>
+          <div class="sched-hdr-sub" id="schedDayLabel">Selecione um dia</div>
         </div>
-        <div class="sched-pills" id="schedPills"></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="sched-pills" id="schedPills"></div>
+          <button id="delDayBtn" onclick="deleteSelectedDay()" title="Excluir este dia" style="display:none;width:28px;height:28px;border-radius:8px;border:1px solid color-mix(in oklab,var(--destructive) 30%,transparent);background:color-mix(in oklab,var(--destructive) 10%,transparent);color:var(--destructive);cursor:pointer;font-size:14px">🗑</button>
+        </div>
       </div>
       <div class="gen-progress" id="genProgress"><div class="gen-bar" id="genBar" style="width:0%"></div></div>
       <div class="sched-scroll" id="schedList"></div>
@@ -872,6 +882,21 @@ svg.ico{display:block;flex-shrink:0}
     <div id="pickerDayList" style="display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;padding-right:2px"></div>
     <div class="modal-footer">
       <button class="btn-outline" onclick="closeGalleryPicker()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ADD DAY MODAL ═══════════ -->
+<div class="modal-overlay" id="addDayModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Criar dia</div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label">Data</label></div>
+      <input type="date" id="addDayInput" class="input-base"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeAddDayModal()">Cancelar</button>
+      <button class="btn-grad" onclick="confirmAddDay()">Criar</button>
     </div>
   </div>
 </div>
@@ -1161,7 +1186,7 @@ function showList(){
 }
 
 function showNew(){
-  editingId=null;isActive=true;schedules=[];
+  editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
   pendingPath=null;pendingName=null;
   ['fName','fDesc','fToken','fChat','fPersona','fXai'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('editorTitle').textContent='Nova Campanha';
@@ -1176,14 +1201,17 @@ function showNew(){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title='Nova Campanha · TeleFluxo';
-  selectedDay='';visibleDays=7;loadDayPhotoCounts();
+  buildDayNav();renderSchedules();
 }
 
 function showEdit(id){
   const c=campaigns.find(x=>x.id===id);if(!c) return;
   editingId=id;isActive=c.active;
-  schedules=JSON.parse(JSON.stringify(c.schedules||[]));
-  schedules.forEach((s,i)=>s._idx=i);
+  campaignDays=JSON.parse(JSON.stringify(c.days||{}));
+  selectedDay='';schedules=[];expandedSlots=new Set();
+  // Seleciona o primeiro dia se existir
+  const firstDay=Object.keys(campaignDays).sort()[0];
+  if(firstDay){selectedDay=firstDay;schedules=(campaignDays[firstDay].slots||[]).map((s,i)=>({...s,_idx:i}));}
   document.getElementById('fName').value=c.name||'';
   document.getElementById('fDesc').value=c.desc||'';
   document.getElementById('fToken').value=c.token||'';
@@ -1191,7 +1219,8 @@ function showEdit(id){
   document.getElementById('fPersona').value=c.persona||'';
   document.getElementById('fXai').value=c.xai_key||'';
   document.getElementById('editorTitle').textContent=c.name||'Campanha';
-  document.getElementById('editorMeta').textContent=`${(c.schedules||[]).length} horários · Atualizado em ${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}`;
+  const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
+  document.getElementById('editorMeta').textContent=`${_days.length} dia(s) · ${_slots} horários · Atualizado em ${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}`;
   document.getElementById('testBtn').style.display='inline-flex';
   const th=document.getElementById('tokenHint');
   th.className='field-hint token-hint ok';
@@ -1207,7 +1236,7 @@ function showEdit(id){
   document.getElementById('galleryView').style.display='none';
   document.getElementById('editorView').style.display='block';
   document.title=`${c.name} · TeleFluxo`;
-  selectedDay='';visibleDays=7;loadDayPhotoCounts();
+  buildDayNav();renderSchedules();
   startLogTimer();
 }
 
@@ -1361,10 +1390,12 @@ function slotMsgChange(idx,val){
 async function slotUpload(e,idx){
   const file=e.target.files[0];if(!file) return;
   showToast('Enviando…','info');
-  const fd=new FormData();fd.append('file',file);
+  const fd=new FormData();
+  fd.append('file',file);
+  if(selectedDay) fd.append('day',selectedDay);
   const r=await fetch('/api/upload',{method:'POST',body:fd});
   const data=await r.json();
-  if(schedules[idx]){schedules[idx].media_path=data.path;schedules[idx].media_name=data.name;}
+  if(schedules[idx]){schedules[idx].media_path=data.url;schedules[idx].media_name=data.name;}
   const mn=document.getElementById('mname_'+idx);
   if(mn) mn.textContent=data.name;
   showToast('Mídia enviada!','success');
@@ -1386,11 +1417,18 @@ function chType(idx,type){if(schedules[idx])schedules[idx].type=type;renderSched
 function rmSched(idx){schedules.splice(idx,1);schedules.forEach((s,i)=>s._idx=i);renderSchedules();}
 
 async function sendNow(schedId,idx){
-  if(sending||!editingId||!schedId){if(!editingId)showToast('Salve a campanha primeiro','error');return;}
+  if(sending||!editingId||!schedId||!selectedDay){
+    if(!editingId)showToast('Salve a campanha primeiro','error');
+    else if(!selectedDay)showToast('Selecione um dia','error');
+    return;
+  }
   sending=true;
   showToast('Enviando…','info');
-  try{await api('POST',`/campaigns/${editingId}/send-now/${schedId}`);showToast('✅ Enviado!','success');}
-  catch(e){showToast('Erro ao enviar','error');}
+  try{
+    const r=await api('POST',`/campaigns/${editingId}/days/${selectedDay}/send-now`,{slot_id:schedId});
+    if(r.ok) showToast('✅ Enviado!','success');
+    else showToast(`❌ ${r.error||'Erro'}`, 'error');
+  }catch(e){showToast('Erro ao enviar','error');}
   sending=false;
 }
 
@@ -1419,80 +1457,126 @@ async function generateCopyModal(){
 }
 
 async function generateDay(){
+  if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
   const xai=document.getElementById('fXai').value.trim()||localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
-  if(schedules.length>0&&!confirm('Isso vai substituir os horários atuais. Continuar?')) return;
+  if(schedules.length>0&&!confirm(`Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`)) return;
   const btn=document.getElementById('genDayBtn');
   btn.disabled=true;
   const prog=document.getElementById('genProgress');const bar=document.getElementById('genBar');
   prog.style.display='block';bar.style.width='15%';
-  showToast('Gerando 24 horários'+(xai?' + copys com Grok':'')+'…','info');
+  showToast(`Gerando dia ${selectedDay}`+(xai?' com Grok':'')+'…','info');
   try{
-    const r=await api('POST','/generate-day',{persona,xai_key:xai});
+    const r=await api('POST','/generate-day',{persona,xai_key:xai,day:selectedDay});
     bar.style.width='100%';
-    if(r.ok){schedules=r.schedules.map((s,i)=>({...s,_idx:i}));renderSchedules();showToast(`✅ ${schedules.length} horários criados!`,'success');}
-    else showToast('Erro ao gerar dia','error');
+    if(r.ok){
+      schedules=r.slots.map((s,i)=>({...s,_idx:i}));
+      campaignDays[selectedDay]={slots:[...schedules]};
+      // Salva imediatamente no servidor
+      await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{slots:schedules});
+      renderSchedules();buildDayNav();
+      showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+    } else showToast('Erro ao gerar dia','error');
   }catch(e){showToast('Erro de conexão','error');}
   btn.disabled=false;
   setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
 }
 
 // ─── DAY NAVIGATOR ───
-let selectedDay=''; // YYYY-MM-DD
-let dayPhotoCounts={}; // {YYYY-MM-DD: count}
-let visibleDays=7;
+let selectedDay='';   // YYYY-MM-DD atualmente selecionado
+let campaignDays={};  // {YYYY-MM-DD: {slots:[...]}}
 
 const WEEKDAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function fmtDayChip(iso){
+  const [y,m,d]=iso.split('-');
+  const dt=new Date(Number(y),Number(m)-1,Number(d));
+  const today=new Date().toISOString().slice(0,10);
+  return {num:d, wd:WEEKDAYS[dt.getDay()], isToday:iso===today};
+}
 
 function buildDayNav(){
   const container=document.getElementById('dayNavChips');
   if(!container) return;
-  const today=new Date();
-  const chips=[];
-  for(let i=0;i<visibleDays;i++){
-    const d=new Date(today);
-    d.setDate(today.getDate()+i);
-    const iso=d.toISOString().slice(0,10);
-    const day=d.getDate();
-    const wd=WEEKDAYS[d.getDay()];
-    const count=dayPhotoCounts[iso]||0;
-    const isToday=i===0;
-    const isActive=selectedDay===iso||(selectedDay===''&&i===0);
-    chips.push(`<div class="day-chip${isActive?' active':''}${count>0?' has-photos':''}" onclick="selectDay('${iso}')">
-      <span class="day-chip-num">${day}</span>
+  const days=Object.keys(campaignDays).sort();
+  if(!days.length){
+    container.innerHTML='<div style="font-size:12px;color:var(--muted-fg);padding:6px 0">Nenhum dia criado. Clique em "+ Criar dia".</div>';
+    document.getElementById('schedDayLabel').textContent='Selecione um dia';
+    document.getElementById('schedList').innerHTML='';
+    document.getElementById('schedPills').innerHTML='';
+    document.getElementById('delDayBtn').style.display='none';
+    return;
+  }
+  container.innerHTML=days.map(iso=>{
+    const {num,wd,isToday}=fmtDayChip(iso);
+    const slots=campaignDays[iso]?.slots||[];
+    const hasSlots=slots.length>0;
+    const isActive=selectedDay===iso;
+    return `<div class="day-chip${isActive?' active':''}${hasSlots?' has-photos':''}" onclick="selectDay('${iso}')">
+      <span class="day-chip-num">${num}/${iso.slice(5,7)}</span>
       <span class="day-chip-wd">${isToday?'Hoje':wd}</span>
-      <span class="day-chip-dot" title="${count} foto(s)"></span>
-    </div>`);
-  }
-  container.innerHTML=chips.join('');
-  // update label
-  const lbl=document.getElementById('schedDayLabel');
-  if(lbl){
-    const active=selectedDay||new Date().toISOString().slice(0,10);
-    const [y,m,dd]=active.split('-');
-    const count=dayPhotoCounts[active]||0;
-    lbl.textContent=`${dd}/${m}/${y}${count?` · ${count} foto(s) disponível`:' · sem fotos'}`;
-  }
-}
+      <span class="day-chip-dot" title="${slots.length} slot(s)"></span>
+    </div>`;
+  }).join('');
 
-async function loadDayPhotoCounts(){
-  try{
-    const r=await fetch('/api/media');
-    const data=await r.json();
-    dayPhotoCounts={};
-    (data.days||[]).forEach(d=>{dayPhotoCounts[d.day]=d.total;});
-  }catch(e){}
-  buildDayNav();
+  // Update label
+  if(selectedDay){
+    const [y,m,d]=selectedDay.split('-');
+    const slots=campaignDays[selectedDay]?.slots||[];
+    document.getElementById('schedDayLabel').textContent=`${d}/${m}/${y} · ${slots.length} post(s)`;
+    document.getElementById('delDayBtn').style.display='flex';
+  }
 }
 
 function selectDay(iso){
+  // Salva slots do dia atual antes de trocar
+  if(selectedDay && campaignDays[selectedDay]){
+    campaignDays[selectedDay].slots=[...schedules];
+  }
   selectedDay=iso;
+  schedules=(campaignDays[iso]?.slots||[]).map((s,i)=>({...s,_idx:i}));
+  expandedSlots=new Set();
   buildDayNav();
+  renderSchedules();
 }
 
-function addNextDay(){
-  visibleDays++;
-  buildDayNav();
+// ─── ADD DAY MODAL ───
+function openAddDayModal(){
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
+  document.getElementById('addDayInput').value=new Date().toISOString().slice(0,10);
+  document.getElementById('addDayModal').classList.add('open');
+}
+function closeAddDayModal(){document.getElementById('addDayModal').classList.remove('open');}
+
+async function confirmAddDay(){
+  const day=document.getElementById('addDayInput').value;
+  if(!day){showToast('Selecione uma data','error');return;}
+  if(campaignDays[day]){showToast('Dia já existe','error');return;}
+  showToast('Criando pasta…','info');
+  const r=await api('POST',`/campaigns/${editingId}/days`,{day});
+  if(r.ok){
+    campaignDays[day]={slots:[]};
+    closeAddDayModal();
+    selectDay(day);
+    showToast(`Dia ${day} criado!`,'success');
+  } else {
+    showToast('Erro ao criar dia','error');
+  }
+}
+
+async function deleteSelectedDay(){
+  if(!selectedDay||!editingId) return;
+  if(!confirm(`Excluir o dia ${selectedDay} e todos os seus horários?`)) return;
+  const r=await api('DELETE',`/campaigns/${editingId}/days/${selectedDay}`);
+  if(r.ok){
+    delete campaignDays[selectedDay];
+    selectedDay='';
+    schedules=[];
+    const remaining=Object.keys(campaignDays).sort();
+    if(remaining.length) selectDay(remaining[0]);
+    else {buildDayNav();renderSchedules();}
+    showToast('Dia excluído','error');
+  }
 }
 
 // ─── LOGS ───
@@ -1566,22 +1650,27 @@ async function saveCamp(){
   if(!name){showToast('Informe o nome','error');return;}
   if(!token){showToast('Informe o Bot Token','error');return;}
   if(!chat){showToast('Informe o Chat ID','error');return;}
+  // Salva slots do dia atual em memória antes de enviar
+  if(selectedDay && campaignDays[selectedDay]){
+    campaignDays[selectedDay].slots=schedules.map(s=>{const c={...s};delete c._idx;return c;});
+  }
   const body={
     name,token,chat,
     desc:document.getElementById('fDesc').value.trim(),
     persona:document.getElementById('fPersona').value.trim(),
     xai_key:document.getElementById('fXai').value.trim(),
     active:isActive,
-    schedules:schedules.map(s=>({...s,_idx:undefined})),
+    days:campaignDays,
   };
   let result;
   if(editingId){result=await api('PUT',`/campaigns/${editingId}`,body);}
   else{result=await api('POST','/campaigns',body);editingId=result.id;}
   await loadCamps();
+  const totalSlots=Object.values(campaignDays).reduce((s,d)=>s+(d.slots?.length||0),0);
   showToast('Campanha salva!','success');
   document.getElementById('testBtn').style.display='inline-flex';
   document.getElementById('editorTitle').textContent=name;
-  document.getElementById('editorMeta').textContent=`${schedules.length} horários · Atualizado em ${new Date().toLocaleDateString('pt-BR')}`;
+  document.getElementById('editorMeta').textContent=`${Object.keys(campaignDays).length} dia(s) · ${totalSlots} horários · Atualizado em ${new Date().toLocaleDateString('pt-BR')}`;
   const badge=document.getElementById('editorStatusBadge');
   badge.style.display='inline-flex';
   badge.className=isActive?'pill-active':'pill-paused';
@@ -1598,7 +1687,7 @@ function renderCards(){
   const el=document.getElementById('campCards');
   const total=campaigns.length;
   const active=campaigns.filter(c=>c.active).length;
-  const totalSched=campaigns.reduce((s,c)=>s+(c.schedules?.length||0),0);
+  const totalSched=campaigns.reduce((s,c)=>s+Object.values(c.days||{}).reduce((a,d)=>a+(d.slots?.length||0),0),0);
   document.getElementById('statTotal').textContent=total;
   document.getElementById('statActive').textContent=active;
   document.getElementById('statSchedules').textContent=totalSched;
