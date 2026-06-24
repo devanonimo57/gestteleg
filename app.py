@@ -49,34 +49,59 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
 
-    type_hints = {
-        "image":    "uma legenda curta para a foto",
-        "reaction": "uma mensagem curta e provocativa",
-        "poll":     "uma enquete com pergunta na primeira linha e 3 opções nas linhas seguintes",
-        "text":     "uma mensagem curta e provocativa",
-        "video":    "uma legenda curta para o vídeo",
-    }
-    hint = type_hints.get(post_type, "uma mensagem curta")
-
     historico = ""
     if used_texts:
         lista = "\n".join(f"- {t}" for t in used_texts[-10:])
-        historico = f"\n\nTextos já usados hoje (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
+        historico = f"\n\nTextos já usados (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
 
-    system = f"""{persona}
-Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.
-Para enquetes: primeira linha = pergunta, próximas linhas = opções (máx 4).{historico}"""
+    # Temas variados para não ficar só falando de manchas
+    temas_texto = [
+        "convide o seguidor pra um conteúdo exclusivo, com desejo e intimidade",
+        "faça uma provocação sexual direta, como se estivesse mandando mensagem pro seguidor",
+        "fale sobre o que você vai fazer hoje à noite, com insinuação",
+        "faça o seguidor sentir que está perdendo algo imperdível",
+        "mande um recado safado como se fosse de manhã acordando",
+        "fale sobre uma fantasia sexual de forma direta e convidativa",
+        "faça uma chacoalhada no seguidor, diga que ele precisa te ver agora",
+    ]
+    temas_enquete = [
+        "O que você quer ver de mim?",
+        "Como você prefere que eu apareça?",
+        "Qual é sua maior fantasia comigo?",
+        "O que te deixa mais louco em mim?",
+        "O que você faria se estivesse aqui agora?",
+    ]
 
-    prompt = f"Escreva {hint}. Gancho diferente de tudo que já foi postado hoje."
+    import random
+    if post_type == "poll":
+        tema = random.choice(temas_enquete)
+        prompt = (
+            f"Crie uma enquete para canal Telegram adulto com o tema: '{tema}'\n"
+            f"Primeira linha = a pergunta (curta, direta, no estilo da persona abaixo).\n"
+            f"Próximas 3-4 linhas = opções de resposta (curtas, safadas, brasileiras).\n"
+            f"Use gírias brasileiras naturais. Sem palavras como 'exótico', 'sensual', 'provocante', 'único'.\n"
+            f"Persona de referência (tom, não repita literalmente): {persona[:300]}"
+            f"{historico}"
+        )
+    else:
+        tema = random.choice(temas_texto)
+        prompt = (
+            f"Escreva uma mensagem curta para canal Telegram adulto: {tema}.\n"
+            f"Escreva na primeira pessoa, como se fosse a própria modelo falando.\n"
+            f"Use linguagem coloquial brasileira, gírias naturais. "
+            f"Sem palavras pomposas. Máx 2 frases.\n"
+            f"Persona de referência (tom, não repita literalmente): {persona[:300]}"
+            f"{historico}"
+        )
 
     try:
         r = requests.post(
             "https://api.x.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
-                "model": "grok-3",
+                "model": "grok-4.3",
                 "messages": [
-                    {"role": "system", "content": system},
+                    {"role": "system", "content": "Você é uma modelo brasileira adulta que escreve posts para canal Telegram. Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução."},
                     {"role": "user",   "content": prompt},
                 ],
                 "max_tokens": 200,
@@ -127,10 +152,12 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                         "content": [
                             {"type": "image_url", "image_url": {"url": img_data_url}},
                             {"type": "text", "text": (
-                                "Crie uma copy explícita e curta para canal Telegram adulto, "
-                                "contextualizando EXATAMENTE o que aparece nessa imagem. "
-                                "Escreva na primeira pessoa como se fosse a modelo falando. "
-                                "Apenas o texto do post, sem explicações."
+                                "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto, "
+                                "falando exatamente o que tá acontecendo na imagem. "
+                                "Escreve na primeira pessoa, como se você fosse a gostosa da foto. "
+                                "Usa linguagem coloquial brasileira, gírias naturais, jeito de falar de mulher safada mesmo. "
+                                "Sem palavras chatas como 'exótico', 'sensual', 'provocante'. "
+                                "Máximo 2 frases. Só o texto, sem explicação."
                             )},
                         ],
                     }
