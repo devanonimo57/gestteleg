@@ -821,7 +821,7 @@ svg.ico{display:block;flex-shrink:0}
           <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar horário
         </button>
-        <button class="sched-ai-btn" id="genDayBtn" onclick="generateDay()">
+        <button class="sched-ai-btn" id="genDayBtn" onclick="openGenDayModal()">
           <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           Gerar dia completo com IA
         </button>
@@ -860,6 +860,33 @@ svg.ico{display:block;flex-shrink:0}
 
   <div id="dayFolders" class="day-folders"></div>
 </main>
+</div>
+
+<!-- ═══════════ GERAR DIA MODAL ═══════════ -->
+<div class="modal-overlay" id="genDayChoiceModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Gerar dia completo com IA</div>
+    <p style="font-size:13px;color:var(--muted-fg);margin-bottom:18px">Quais horários você quer gerar?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-grad" style="justify-content:flex-start;gap:12px;padding:14px 18px;text-align:left" onclick="closeGenDayModal();generateDay(false)">
+        <span style="font-size:20px">📅</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">Dia inteiro</div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px">Gera todos os horários configurados</div>
+        </div>
+      </button>
+      <button class="btn-outline" style="justify-content:flex-start;gap:12px;padding:14px 18px;text-align:left" onclick="closeGenDayModal();generateDay(true)">
+        <span style="font-size:20px">⏱️</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">A partir de agora</div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px" id="genDayFromNowLabel">Apenas horários futuros</div>
+        </div>
+      </button>
+    </div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn-outline" onclick="closeGenDayModal()">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════ NEW DAY MODAL ═══════════ -->
@@ -1493,12 +1520,34 @@ async function generateCopyModal(){
   btn.disabled=false;btn.textContent='✨ IA';
 }
 
-async function generateDay(){
+function openGenDayModal(){
+  if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
+  // Atualiza label com hora atual BRT
+  const nowBRT=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('genDayFromNowLabel').textContent=`Horários a partir das ${nowBRT} (BRT)`;
+  document.getElementById('genDayChoiceModal').classList.add('open');
+}
+function closeGenDayModal(){
+  document.getElementById('genDayChoiceModal').classList.remove('open');
+}
+
+async function generateDay(fromNow=false){
   if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
   if(!editingId){showToast('Salve a campanha primeiro','error');return;}
   const xai=localStorage.getItem('global_xai')||'';
   const persona=document.getElementById('fPersona').value.trim();
-  if(schedules.length>0&&!confirm(`Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`)) return;
+  // Hora atual em BRT
+  const currentHourBRT=parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour:'2-digit',hour12:false}));
+  const futureSlotsCount=fromNow
+    ? schedules.filter(s=>parseInt(s.time)>=currentHourBRT).length
+    : schedules.length;
+  if(futureSlotsCount>0){
+    const msg=fromNow
+      ? `Isso vai substituir ${futureSlotsCount} horário(s) a partir das ${currentHourBRT}h do dia ${selectedDay}. Continuar?`
+      : `Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`;
+    if(!confirm(msg)) return;
+  }
 
   const btn=document.getElementById('genDayBtn');
   const prog=document.getElementById('genProgress');
@@ -1507,9 +1556,15 @@ async function generateDay(){
   prog.style.display='block';
   bar.style.width='0%';
 
-  // Limpa slots atuais
-  schedules=[];
-  campaignDays[selectedDay]={slots:[]};
+  if(fromNow){
+    // Mantém slots passados, remove apenas os futuros
+    schedules=schedules.filter(s=>parseInt(s.time)<currentHourBRT);
+    campaignDays[selectedDay]={slots:[...schedules]};
+  } else {
+    // Limpa tudo
+    schedules=[];
+    campaignDays[selectedDay]={slots:[]};
+  }
   renderSchedules();
 
   try{
@@ -1517,7 +1572,11 @@ async function generateDay(){
     const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs`);
     if(!cfgRes.ok){showToast('Erro ao carregar configuração','error');btn.disabled=false;prog.style.display='none';return;}
 
-    const configs=cfgRes.configs;
+    let configs=cfgRes.configs;
+    if(fromNow && currentHourBRT>=0){
+      configs=configs.filter(c=>c.hour>=currentHourBRT);
+      if(!configs.length){showToast('Nenhum horário futuro para gerar','error');btn.disabled=false;prog.style.display='none';return;}
+    }
     const total=configs.length;
 
     // 2. Gera copy para cada slot individualmente — aparece em tempo real
@@ -1542,7 +1601,7 @@ async function generateDay(){
         cta_label:ctaLabel,
         media_path:cfg.media_path,
         media_name:cfg.media_name,
-        _idx:i,
+        _idx:schedules.length,
       };
       schedules.push(slot);
       campaignDays[selectedDay].slots=[...schedules];
@@ -1627,16 +1686,19 @@ function selectDay(iso){
 // ─── ADD / DELETE DAY ───
 async function addNextDay(){
   if(!editingId){showToast('Salve a campanha primeiro','error');return;}
-  // Próximo dia = último dia existente + 1, ou hoje se vazio
   const days=Object.keys(campaignDays).sort();
+  const today=todayBRT();
   let next;
-  if(days.length){
+  // Se hoje ainda não existe na campanha, cria hoje; senão próximo após o último
+  if(!campaignDays[today]){
+    next=today;
+  } else if(days.length){
     const last=days[days.length-1];
     const d=new Date(last+'T12:00:00');
     d.setDate(d.getDate()+1);
     next=d.toISOString().slice(0,10);
   } else {
-    next=todayBRT();
+    next=today;
   }
   if(campaignDays[next]){showToast('Dia já existe','error');return;}
   const r=await api('POST',`/campaigns/${editingId}/days`,{day:next});
