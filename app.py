@@ -149,19 +149,19 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
         print(f"[Vision] Passo 1 exception: {e}")
         description = "foto sensual de uma modelo"
 
-    # PASSO 2: Grok-3 gera a legenda explícita com base na descrição + persona
-    historico = ""
-    if used_texts:
-        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
-        historico = f"\n\nTextos já usados hoje (NÃO repita ideias):\n{lista}"
-
-    system2 = f"""{persona}
-Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução.{historico}"""
+    # PASSO 2: Grok-3 gera a legenda com base APENAS na descrição visual — sem persona
+    # A persona introduz "manchas/vitiligo" que sobrescreve o contexto da imagem
+    system2 = (
+        "Você escreve legendas curtas e explícitas para fotos de modelos adultas no Telegram VIP. "
+        "Escreva na primeira pessoa, seja direta e provocante. "
+        "Escreva APENAS o texto do post, sem explicações, sem aspas."
+    )
 
     prompt2 = (
         f"A foto mostra: {description}\n\n"
-        "Com base nessa foto, escreva uma legenda curta (2-3 frases) e explícita na primeira pessoa, "
-        "mencionando especificamente o que aparece na imagem. Seja provocante e direta."
+        "Escreva uma legenda de 2-3 frases na primeira pessoa que descreva especificamente "
+        "o que está acontecendo nessa foto. Mencione os elementos visuais reais da imagem. "
+        "Seja explícita e provoque o seguidor a querer ver mais."
     )
 
     try:
