@@ -1324,15 +1324,6 @@ async function validateToken(){
   }
 }
 
-async function validateXai(){
-  const key=document.getElementById('fXai').value.trim();
-  if(!key){showToast('Informe a chave Grok/xAI','error');return;}
-  showToast('Testando chave…','info');
-  const r=await api('POST','/generate-copy',{persona:'canal de teste',type:'text',xai_key:key});
-  const xh=document.getElementById('xaiHint');
-  if(r.ok){xh.className='token-hint ok';xh.textContent='✓ Chave válida!';showToast('Grok funcionando!','success');}
-  else{xh.className='token-hint err';xh.textContent=`✗ ${r.error||'Chave inválida'}`;showToast('Chave inválida','error');}
-}
 
 async function testConn(){
   if(!editingId){showToast('Salve primeiro','error');return;}
@@ -1439,10 +1430,9 @@ async function slotUpload(e,idx){
   const r=await fetch('/api/upload',{method:'POST',body:fd});
   const data=await r.json();
   if(schedules[idx]){schedules[idx].media_path=data.url;schedules[idx].media_name=data.name;}
-  const mn=document.getElementById('mname_'+idx);
-  if(mn) mn.textContent=data.name;
   showToast('Mídia enviada!','success');
   e.target.value='';
+  renderSchedules();
 }
 
 function openSlotPicker(idx){
@@ -1777,7 +1767,7 @@ async function handleUpload(e){
   const fd=new FormData();fd.append('file',file);
   const r=await fetch('/api/upload',{method:'POST',body:fd});
   const data=await r.json();
-  pendingPath=data.path;pendingName=data.name;
+  pendingPath=data.url;pendingName=data.name;
   const prev=document.getElementById('mPreviews');prev.innerHTML='';
   if(file.type.startsWith('image/')){const img=document.createElement('img');img.src=URL.createObjectURL(file);img.className='prev-img';prev.appendChild(img);}
   else{const b=document.createElement('div');b.className='prev-badge';b.textContent='🎬 '+file.name.slice(0,20);prev.appendChild(b);}
@@ -1849,10 +1839,12 @@ function renderCards(){
   const total=campaigns.length;
   const active=campaigns.filter(c=>c.active).length;
   const totalSched=campaigns.reduce((s,c)=>s+Object.values(c.days||{}).reduce((a,d)=>a+(d.slots?.length||0),0),0);
+  const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+  const statToday=campaigns.reduce((s,c)=>s+(c.days?.[today]?.slots?.length||0),0);
   document.getElementById('statTotal').textContent=total;
   document.getElementById('statActive').textContent=active;
   document.getElementById('statSchedules').textContent=totalSched;
-  document.getElementById('statToday').textContent=0;
+  document.getElementById('statToday').textContent=statToday;
 
   if(!campaigns.length){
     el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><h3>Nenhuma campanha ainda</h3><p>Crie sua primeira campanha para começar.</p></div>';
