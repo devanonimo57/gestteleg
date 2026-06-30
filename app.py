@@ -60,41 +60,74 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
         historico = f"\n\nTextos já usados (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
 
     temas_texto = [
-        "convide o seguidor pra um conteúdo exclusivo, com desejo e intimidade",
-        "faça uma provocação sexual direta, como se estivesse mandando mensagem pro seguidor",
-        "fale sobre o que você vai fazer hoje à noite, com insinuação",
-        "faça o seguidor sentir que está perdendo algo imperdível",
-        "mande um recado safado como se fosse de manhã acordando",
-        "fale sobre uma fantasia sexual de forma direta e convidativa",
-        "faça uma chacoalhada no seguidor, diga que ele precisa te ver agora",
+        # Manhã / acordando
+        "acorda com preguiça e manda uma mensagem safada pro seguidor como se fosse de manhã cedo, ainda na cama",
+        "acabou de acordar, tá com fome mas tá com mais vontade de outra coisa, conta isso de forma direta",
+        # Banho / se arrumando
+        "saiu do banho agora e tá com preguiça de se vestir, fala sobre isso de forma provocante",
+        "tá se arrumando pra sair mas tá pensando em cancelar tudo e ficar em casa fazendo outra coisa",
+        # Tédio / em casa
+        "tá entediada em casa sem fazer nada e com aquela vontade que não passa",
+        "tá deitada no sofá rolando o celular e pensa no seguidor de repente, fala isso de forma direta",
+        # Bastidores / conteúdo
+        "fala de forma animada sobre o conteúdo que vai gravar hoje, sem entregar o que é",
+        "acabou de gravar algo e ficou até ela mesma surpresa com o resultado, provoca o seguidor",
+        # Confissão / segredo
+        "conta um segredo safado que nunca contou pra ninguém, algo que aconteceu com ela",
+        "confessa uma vontade que tá guardando há dias e não aguentou mais",
+        # Desafio / aposta
+        "desafia o seguidor a aguentar ver o que ela vai mostrar sem reagir",
+        "aposta que o seguidor não vai conseguir assistir até o final sem querer mais",
+        # Provocação direta
+        "manda um recado direto, curto e safado pro seguidor como se fosse mensagem de WhatsApp",
+        "faz uma provocação sexual direta, como se estivesse com o seguidor na mesma sala",
+        # Madrugada
+        "é madrugada, não consegue dormir, tá pensando em coisas que não devia, conta isso",
+        "acaba de mandar uma mensagem de madrugada que não deveria ter mandado e não tá arrependida",
+        # Academia / corpo
+        "acabou de sair da academia, tá suada, e descreve isso de forma que parece outra coisa",
+        "fala que malhou hoje e que o corpo tá pedindo uma recompensa",
+        # FOMO / urgência
+        "faz o seguidor sentir que tá perdendo algo que só acontece hoje",
+        "avisa que o acesso ao conteúdo vai sumir em breve e não vai voltar",
+        # Humor leve
+        "zoeira com o seguidor que ainda não entrou, mas de forma carinhosa e chamativa",
+        "faz uma observação irônica e safada sobre o tipo de seguidor que ela tem",
+        # Fim de semana / clima
+        "é fim de semana, tá calor, tá em casa sem roupa e com vontade de companhia",
+        "fala que o calor tá insuportável e que a solução que ela encontrou não é bem o que esperavam",
     ]
     temas_enquete = [
-        "O que você quer ver de mim?",
-        "Como você prefere que eu apareça?",
-        "Qual é sua maior fantasia comigo?",
-        "O que te deixa mais louco em mim?",
-        "O que você faria se estivesse aqui agora?",
+        "o que o seguidor quer ver dela hoje",
+        "como o seguidor prefere ela — mais comportada ou mais soltinha",
+        "o que o seguidor faria se estivesse com ela agora",
+        "qual fantasia o seguidor mais quer ver ela realizar",
+        "o que mais deixa o seguidor louco nela",
+        "o que o seguidor acha que ela tá usando agora",
+        "se o seguidor prefere vídeo curto ou longo dela",
+        "o que o seguidor acha que ela vai postar hoje à noite",
     ]
 
     import random
     if post_type == "poll":
         tema = random.choice(temas_enquete)
         prompt = (
-            f"Crie uma enquete para canal Telegram adulto com o tema: '{tema}'\n"
-            f"Primeira linha = a pergunta (curta, direta, no estilo da persona abaixo).\n"
-            f"Próximas 3-4 linhas = opções de resposta (curtas, safadas, brasileiras).\n"
-            f"Use gírias brasileiras naturais. Sem palavras como 'exótico', 'sensual', 'provocante', 'único'.\n"
-            f"Persona de referência (tom, não repita literalmente): {persona[:300]}"
+            f"Crie uma enquete pra canal Telegram adulto sobre: {tema}.\n"
+            f"Primeira linha = a pergunta (curta, direta, como uma jovem brasileira falaria no zap).\n"
+            f"Próximas 3-4 linhas = opções de resposta (curtas, safadas, naturais).\n"
+            f"Escreve como uma pessoa real, não como marketing. Sem palavras como 'sensual', 'provocante', 'único', 'exótico'.\n"
+            f"Persona de referência (tom, não copie literalmente): {persona[:300]}"
             f"{historico}"
         )
     else:
         tema = random.choice(temas_texto)
         prompt = (
-            f"Escreva uma mensagem curta para canal Telegram adulto: {tema}.\n"
-            f"Escreva na primeira pessoa, como se fosse a própria modelo falando.\n"
-            f"Use linguagem coloquial brasileira, gírias naturais. "
-            f"Sem palavras pomposas. Máx 2 frases.\n"
-            f"Persona de referência (tom, não repita literalmente): {persona[:300]}"
+            f"Escreva UMA mensagem curta pra canal Telegram adulto. Tema: {tema}.\n"
+            f"Escreva na primeira pessoa, como uma jovem brasileira mandando mensagem no zap — informal, natural, sem parecer marketing.\n"
+            f"Pode usar 'kkkk', 'né', 'tá', 'mano', 'cara', gírias do dia a dia. Máx 2 frases.\n"
+            f"NÃO use: 'sensual', 'provocante', 'sedutora', 'exclusivo', 'único', 'exótico', 'irresistível'.\n"
+            f"NÃO mencione o nome da modelo.\n"
+            f"Persona de referência (tom, não copie literalmente): {persona[:300]}"
             f"{historico}"
         )
 
@@ -105,11 +138,11 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
             json={
                 "model": "grok-4.3",
                 "messages": [
-                    {"role": "system", "content": "Você é uma modelo brasileira adulta que escreve posts para canal Telegram. Escreva APENAS o texto do post, sem explicações, sem aspas, sem introdução."},
+                    {"role": "system", "content": "Você é uma jovem brasileira que escreve posts pra canal Telegram adulto. Escreva como uma pessoa real mandando mensagem — informal, direto, sem parecer robô. Escreva APENAS o texto do post, sem aspas, sem introdução, sem explicação."},
                     {"role": "user",   "content": prompt},
                 ],
                 "max_tokens": 200,
-                "temperature": 0.95,
+                "temperature": 0.92,
             },
             timeout=20,
         )
@@ -187,22 +220,22 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
             headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
             json={
                 "model": "grok-4.3",
-                "messages": [{
-                    "role": "user",
-                    "content": [
+                "messages": [
+                    {"role": "system", "content": "Você é uma jovem brasileira que escreve legendas pra canal Telegram adulto. Escreva como uma pessoa real — informal, direto, sem parecer robô ou marketing. APENAS o texto, sem aspas, sem introdução."},
+                    {"role": "user", "content": [
                         {"type": "image_url", "image_url": {"url": img_data_url}},
                         {"type": "text", "text": (
-                            "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto, "
-                            "falando exatamente o que tá acontecendo na imagem. "
-                            "Escreve na primeira pessoa, como se você fosse a gostosa da foto. "
-                            "Usa linguagem coloquial brasileira, gírias naturais, jeito de falar de mulher safada mesmo. "
-                            "Sem palavras chatas como 'exótico', 'sensual', 'provocante'. "
+                            "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto. "
+                            "Fala na primeira pessoa sobre o que tá acontecendo na imagem, como se você fosse a pessoa da foto mandando mensagem no zap. "
+                            "Tom de jovem brasileira, informal, natural — pode usar 'kkkk', 'né', 'tá', gírias do dia a dia. "
+                            "NÃO use: 'sensual', 'provocante', 'sedutora', 'exótico', 'irresistível'. "
+                            "NÃO mencione o nome da pessoa. "
                             "Máximo 2 frases. Só o texto, sem explicação."
                         )},
-                    ],
-                }],
+                    ]},
+                ],
                 "max_tokens": 250,
-                "temperature": 0.95,
+                "temperature": 0.92,
             },
             timeout=40,
         )
@@ -659,17 +692,18 @@ def api_generate_slot_copy():
     xai_key    = body.get("xai_key", "")
     stype      = body.get("type", "text")
     media_path = body.get("media_path", "")
+    used_texts = body.get("used_texts", []) or []
     if not xai_key:
         return jsonify({"ok": False, "error": "Chave Grok não informada"})
     vision_err = ""
     msg = ""
     if stype in ("image", "video") and media_path:
-        msg, vision_err = generate_copy_vision(persona, media_path, xai_key)
+        msg, vision_err = generate_copy_vision(persona, media_path, xai_key, used_texts=used_texts)
         if not msg:
             print(f"[Vision] Falhou ({vision_err}), usando fallback texto")
-            msg, _ = generate_copy(persona, stype, xai_key)
+            msg, _ = generate_copy(persona, stype, xai_key, used_texts=used_texts)
     else:
-        msg, vision_err = generate_copy(persona, stype, xai_key)
+        msg, vision_err = generate_copy(persona, stype, xai_key, used_texts=used_texts)
     cta_label = generate_cta_label(msg, stype, xai_key) if msg else ""
     return jsonify({"ok": bool(msg), "msg": msg, "cta_label": cta_label, "vision_err": vision_err})
 
