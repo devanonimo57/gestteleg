@@ -1477,13 +1477,14 @@ async function generateCopyInline(idx){
   if(btnExpand){btnExpand.disabled=true;btnExpand.textContent='⏳';}
   // Usa visão se o slot tem imagem/vídeo com media_path
   const useVision=(s.type==='image'||s.type==='video')&&s.media_path;
+  const used_texts=schedules.filter((_,i)=>i!==idx).map(x=>x.msg).filter(Boolean);
   let msg='', ctaLabel='';
   if(useVision){
-    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:s.media_path});
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:s.media_path,used_texts});
     msg=r.msg||''; ctaLabel=r.cta_label||'';
     if(!msg) showToast(`Erro Vision: ${r.vision_err||'falhou'}`,'error');
   } else {
-    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:''});
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:'',used_texts});
     msg=r.msg||''; ctaLabel=r.cta_label||'';
     if(!msg) showToast(`Erro Grok: ${r.vision_err||r.error||'falhou'}`,'error');
   }
@@ -1500,7 +1501,8 @@ async function generateCopyModal(){
   const btn=document.getElementById('genCopyBtn');
   btn.disabled=true;btn.textContent='⏳';
   const type=document.getElementById('mType').value;
-  const r=await api('POST','/generate-slot-copy',{persona,type,xai_key:xai,media_path:pendingPath||''});
+  const used_texts=schedules.map(x=>x.msg).filter(Boolean);
+  const r=await api('POST','/generate-slot-copy',{persona,type,xai_key:xai,media_path:pendingPath||'',used_texts});
   if(r.ok&&r.msg){
     document.getElementById('mMsg').value=r.msg;
     showToast('Copy gerada!','success');
@@ -1577,8 +1579,9 @@ async function generateDay(fromNow=false){
 
       let msg='', ctaLabel='';
       if(xai&&persona){
+        const used_texts=schedules.map(x=>x.msg).filter(Boolean);
         const r=await api('POST','/generate-slot-copy',{
-          persona,xai_key:xai,type:cfg.type,media_path:cfg.media_path
+          persona,xai_key:xai,type:cfg.type,media_path:cfg.media_path,used_texts
         });
         msg=r.msg||''; ctaLabel=r.cta_label||'';
       }
