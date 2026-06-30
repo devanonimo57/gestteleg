@@ -1,10 +1,12 @@
-import os, uuid, time, requests, base64
+import os, uuid, time, requests, base64, threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_from_directory
 from apscheduler.schedulers.background import BackgroundScheduler
 from supabase import create_client
+
+_log_lock = threading.Lock()
 
 BRT = ZoneInfo('America/Sao_Paulo')
 
@@ -314,18 +316,19 @@ def _dispatch(token, chat_id, stype, media, msg, cta_label="", cta_url=""):
         return send_text(token, chat_id, msg or ".", markup)
 
 def log_entry(campaign_id, slot_id, success, detail, attempt=1):
-    campaigns = load_data()
-    for c in campaigns:
-        if c["id"] == campaign_id:
-            c.setdefault("logs", []).insert(0, {
-                "slot_id": slot_id,
-                "time":    datetime.now(BRT).isoformat(),
-                "success": success,
-                "detail":  detail,
-                "attempt": attempt,
-            })
-            c["logs"] = c["logs"][:100]
-    save_data(campaigns)
+    with _log_lock:
+        campaigns = load_data()
+        for c in campaigns:
+            if c["id"] == campaign_id:
+                c.setdefault("logs", []).insert(0, {
+                    "slot_id": slot_id,
+                    "time":    datetime.now(BRT).isoformat(),
+                    "success": success,
+                    "detail":  detail,
+                    "attempt": attempt,
+                })
+                c["logs"] = c["logs"][:100]
+        save_data(campaigns)
 
 def register_all_jobs():
     scheduler.remove_all_jobs()
