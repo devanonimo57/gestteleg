@@ -639,18 +639,16 @@ def _detect_explicit_areas(image_url, xai_key):
     """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
     import json as _json
     prompt = (
-        "Look carefully at this image. Identify ALL explicit body parts visible that must be censored: "
-        "breasts/nipples, genitals, pubic area.\n\n"
-        "For EACH area to censor, return a JSON object: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
-        "- x: horizontal center of the body part, as fraction of image WIDTH (0.0=left edge, 1.0=right edge)\n"
-        "- y: vertical center of the body part, as fraction of image HEIGHT (0.0=top edge, 1.0=bottom edge)\n"
-        "- r: radius of the area to cover, as fraction of image WIDTH. Measure the actual size of the body part in the image.\n\n"
-        "Rules:\n"
-        "- Two breasts = two separate objects. Place each exactly where you see it in the image.\n"
-        "- If the person is not facing forward (side view, back view, lying down, angled), adjust x and y accordingly.\n"
-        "- r should reflect the ACTUAL size visible: a close-up breast might be r=0.20, a small/distant one r=0.08.\n"
-        "- If a body part is partially covered by clothing, still censor the visible portion.\n"
-        "- Return ONLY the JSON array. No text, no explanation."
+        "Look carefully at this image. Your task: place emoji censors directly on top of nipples/areolas and genitals.\n\n"
+        "For EACH nipple or genital area visible, return: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
+        "- x: fraction of image WIDTH where the NIPPLE is (not the center of the breast — the nipple itself)\n"
+        "- y: fraction of image HEIGHT where the NIPPLE is (nipples are usually near the bottom-front of the breast)\n"
+        "- r: radius to cover just the areola/nipple or genital, as fraction of image WIDTH (usually 0.05–0.10)\n\n"
+        "Critical rules:\n"
+        "- Point to the NIPPLE, not the top or center of the breast. The nipple is at the tip/front of the breast.\n"
+        "- Two visible nipples = two separate objects with precise individual coordinates.\n"
+        "- r should be small enough to cover just the nipple/areola (not the whole breast).\n"
+        "- Return ONLY the JSON array. No text."
     )
     try:
         r = requests.post(
