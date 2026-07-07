@@ -1062,6 +1062,8 @@ async function showGallery(){
   document.getElementById('editorView').style.display='none';
   document.getElementById('galleryView').style.display='block';
   document.title='Galeria · TeleFluxo';
+  // garante que campanhas estejam carregadas (necessário para countSlotsForDay)
+  if(!campaigns.length) await loadCamps();
   // populate campaign selector
   const sel=document.getElementById('galCampSel');
   const prev=sel.value;
@@ -1094,20 +1096,21 @@ async function loadMedia(){
   renderDayFolders();
 }
 
+// Mesmo padrão do backend — 24 slots por hora, tipos fixos
+const DAY_TYPES_PATTERN=["image","text","image","poll","image","image","text","image","image","poll","image","text","image","image","text","image","image","poll","image","image","text","image","image","text"];
+
 function countSlotsForDay(campId, day){
-  // Conta quantos slots de imagem/vídeo existem para o dia (a partir da hora atual se for hoje)
-  const camp=campaigns.find(c=>c.id===campId);
-  if(!camp) return null;
-  const dayData=camp.days?.[day];
-  if(!dayData) return null;
-  const slots=(dayData.slots||[]).filter(s=>s.type==='image'||s.type==='video');
+  // Conta quantos slots de imagem/vídeo serão usados para o dia
   const today=todayBRT();
+  let fromHour=0;
   if(day===today){
     const nowBRT=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-    const currentHour=nowBRT.getHours();
-    return slots.filter(s=>{const h=parseInt((s.time||'00:00').split(':')[0]);return h>=currentHour;}).length;
+    fromHour=nowBRT.getHours();
+  } else if(day<today){
+    return 0; // dia passado, não conta
   }
-  return slots.length;
+  return DAY_TYPES_PATTERN.reduce((n,type,hour)=>
+    (type==='image'||type==='video')&&hour>=fromHour?n+1:n, 0);
 }
 
 function renderDayFolders(){
