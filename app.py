@@ -228,16 +228,22 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
             json={
                 "model": "grok-4.3",
                 "messages": [
-                    {"role": "system", "content": "Você é uma jovem brasileira que escreve legendas pra canal Telegram adulto. Escreva como uma pessoa real — informal, direto, sem parecer robô ou marketing. APENAS o texto, sem aspas, sem introdução."},
+                    {"role": "system", "content": (
+                        "Você é uma jovem brasileira escrevendo mensagens pro seu canal Telegram adulto. "
+                        "Escreve de forma natural, como conversa de zap — gírias, abreviações, tom casual. "
+                        "NUNCA diga que 'tirou a foto', 'tá mandando a foto', 'acabou de fotografar' ou qualquer variação disso. "
+                        "APENAS o texto final, sem aspas, sem introdução, sem emoji excessivo."
+                    )},
                     {"role": "user", "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
                         {"type": "text", "text": (
-                            "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto. "
-                            "Fala na primeira pessoa sobre o que tá acontecendo na imagem, como se você fosse a pessoa da foto mandando mensagem no zap. "
-                            "Tom de jovem brasileira, informal, natural — pode usar 'kkkk', 'né', 'tá', gírias do dia a dia. "
+                            "Use essa imagem como inspiração pra criar uma mensagem curta pro canal. "
+                            "A mensagem deve ser na primeira pessoa, tom de jovem brasileira descontraída. "
+                            "Pode falar sobre como tá se sentindo, o que tá pensando, fazer uma pergunta pro seguidor, ou criar uma frase que combine com o clima/ambiente da foto. "
+                            "NÃO descreva a foto nem diga que tirou/mandou/postou ela. "
                             "NÃO use: 'sensual', 'provocante', 'sedutora', 'exótico', 'irresistível'. "
-                            "NÃO mencione o nome da pessoa. "
-                            f"Máximo 2 frases. Só o texto, sem explicação.{historico}"
+                            "NÃO mencione nome. "
+                            f"1 a 2 frases. Só o texto.{historico}"
                         )},
                     ]},
                 ],
