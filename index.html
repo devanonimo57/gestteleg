@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Campanhas · TeleFluxo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --background:oklch(0.145 0.012 285);
+  --foreground:oklch(0.985 0 0);
+  --surface:oklch(0.19 0.015 285);
+  --surface-2:oklch(0.225 0.018 285);
+  --primary:oklch(0.66 0.24 295);
+  --primary-glow:oklch(0.74 0.22 305);
+  --muted:oklch(0.27 0.02 285);
+  --muted-fg:oklch(0.7 0.015 285);
+  --border:oklch(1 0 0 / 0.08);
+  --input-bg:oklch(0 0 0 / 0.30);
+  --success:oklch(0.78 0.18 155);
+  --info:oklch(0.74 0.16 235);
+  --warn:oklch(0.82 0.17 85);
+  --pink:oklch(0.74 0.2 350);
+  --destructive:oklch(0.68 0.22 25);
+  --radius:0.875rem;
+}
+
+body{
+  font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+  background-color:var(--background);
+  color:var(--foreground);
+  min-height:100vh;
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklab,var(--primary) 18%,transparent), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in oklab,var(--primary-glow) 10%,transparent), transparent 70%);
+  background-attachment:fixed;
+}
+
+/* ─── CARD SURFACE ─── */
+.card{
+  background:linear-gradient(180deg,
+    color-mix(in oklab,var(--surface) 90%,transparent),
+    color-mix(in oklab,var(--surface) 70%,transparent));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  backdrop-filter:blur(8px);
+}
+
+/* ─── NAV ─── */
+nav{
+  position:sticky;top:0;z-index:50;
+  border-bottom:1px solid var(--border);
+  background:color-mix(in oklab,var(--background) 70%,transparent);
+  backdrop-filter:blur(24px);
+}
+.nav-inner{
+  max-width:1280px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  height:64px;padding:0 24px;
+}
+.nav-left{display:flex;align-items:center;gap:32px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.logo-icon{
+  width:36px;height:36px;border-radius:12px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-glow));
+  box-shadow:0 8px 24px -6px color-mix(in oklab,var(--primary) 60%,transparent);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.logo-icon svg{width:16px;height:16px;color:#fff;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.logo-text{display:flex;flex-direction:column;line-height:1}
+.logo-name{font-size:15px;font-weight:600;letter-spacing:-.015em}
+.logo-sub{font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-fg);margin-top:1px}
+.nav-links{display:flex;gap:2px}
+.nav-link{
+  padding:6px 12px;border-radius:10px;font-size:13px;font-weight:500;
+  color:var(--muted-fg);background:none;border:none;cursor:pointer;
+  transition:color .15s,background .15s;text-decoration:none;display:inline-block;
+}
+.nav-link:hover{color:var(--foreground);background:rgba(255,255,255,.05)}
+.nav-link.active{color:var(--foreground);background:rgba(255,255,255,.05)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.bot-badge{
+  display:flex;align-items:center;gap:6px;
+  border:1px solid var(--border);border-radius:99px;
+  background:color-mix(in oklab,var(--surface) 60%,transparent);
+  padding:6px 14px;font-size:12px;font-weight:500;color:var(--muted-fg);
+}
+.bot-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.avatar-circle{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface));
+  border:1px solid var(--border);
+}
+
+main{max-width:1280px;margin:0 auto;padding:48px 24px}
+
+/* ─── PAGE HEADER ─── */
+.page-eyebrow{
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+  font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--primary);
+}
+.eyebrow-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--primary);
+  box-shadow:0 0 12px var(--primary);animation:pulse 2s infinite;
+}
+.page-h1{font-size:clamp(32px,5vw,48px);font-weight:600;letter-spacing:-.025em;line-height:1.1}
+.page-desc{margin-top:12px;max-width:520px;font-size:13px;line-height:1.7;color:var(--muted-fg)}
+
+/* ─── GRADIENT BUTTON ─── */
+.btn-grad{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-glow));
+  box-shadow:0 10px 30px -10px color-mix(in oklab,var(--primary) 70%,transparent);
+  color:oklch(0.99 0 0);border:none;border-radius:12px;
+  padding:12px 22px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:box-shadow .2s,filter .15s,transform .1s;
+}
+.btn-grad:hover{filter:brightness(1.1);box-shadow:0 14px 40px -10px color-mix(in oklab,var(--primary) 80%,transparent)}
+.btn-grad:active{transform:scale(.98)}
+.btn-outline{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  color:var(--foreground);padding:10px 22px;font-size:13px;font-weight:500;
+  cursor:pointer;transition:background .15s;
+}
+.btn-outline:hover{background:var(--surface-2)}
+.btn-sm{
+  display:inline-flex;align-items:center;gap:6px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--foreground);
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:8px 14px;cursor:pointer;transition:background .15s;
+}
+.btn-sm:hover{background:rgba(255,255,255,.1)}
+
+/* ─── STATS ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:40px}
+.stat-card{padding:16px}
+.stat-label{font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.stat-value.accent{color:var(--primary)}
+
+/* ─── GROK KEY PANEL ─── */
+.grok-panel{
+  display:flex;flex-direction:column;gap:16px;padding:20px;margin-bottom:40px;
+}
+@media(min-width:768px){
+  .grok-panel{flex-direction:row;align-items:center;justify-content:space-between}
+}
+.grok-left{display:flex;align-items:flex-start;gap:16px}
+.grok-icon{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:color-mix(in oklab,var(--primary) 15%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 25%,transparent);
+  display:flex;align-items:center;justify-content:center;color:var(--primary);
+}
+.grok-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.badge-configured{
+  display:inline-flex;align-items:center;gap:4px;border-radius:99px;
+  background:color-mix(in oklab,var(--success) 10%,transparent);
+  border:1px solid color-mix(in oklab,var(--success) 25%,transparent);
+  color:var(--success);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 8px;
+}
+.grok-desc{margin-top:4px;font-size:12px;color:var(--muted-fg);line-height:1.6}
+.grok-desc a{color:var(--primary);text-decoration:none}
+.grok-desc a:hover{text-decoration:underline}
+.grok-right{display:flex;gap:8px;width:100%}
+@media(min-width:768px){.grok-right{width:auto;min-width:360px}}
+
+/* ─── CAMPAIGN LIST ─── */
+.camp-list{display:flex;flex-direction:column;gap:12px}
+.camp-card{
+  position:relative;display:flex;align-items:center;justify-content:space-between;
+  padding:20px;overflow:hidden;cursor:pointer;transition:border-color .2s,background .2s;
+  text-align:left;width:100%;border:none;
+}
+.camp-card:hover{border-color:color-mix(in oklab,var(--primary) 40%,transparent);background:color-mix(in oklab,var(--surface) 80%,transparent)}
+.camp-stripe{
+  position:absolute;inset-block:0;left:0;width:3px;
+  background:linear-gradient(to bottom,var(--primary),var(--primary-glow));
+  opacity:0;transition:opacity .2s;
+}
+.camp-card:hover .camp-stripe{opacity:1}
+.camp-card-left{display:flex;align-items:center;gap:16px}
+.camp-avatar{
+  width:48px;height:48px;border-radius:12px;
+  background:var(--surface-2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
+  color:var(--muted-fg);flex-shrink:0;
+}
+.camp-name{font-size:15px;font-weight:600;letter-spacing:-.015em;display:flex;align-items:center;gap:8px}
+.camp-meta{margin-top:4px;display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted-fg);font-family:'JetBrains Mono',monospace}
+.camp-meta span{display:flex;align-items:center;gap:6px}
+.camp-card-right{display:flex;align-items:center;gap:4px}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;border:none;background:transparent;
+  color:var(--muted-fg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;
+}
+.icon-btn:hover{background:rgba(255,255,255,.05);color:var(--foreground)}
+.icon-btn.danger:hover{background:color-mix(in oklab,var(--destructive) 15%,transparent);color:var(--destructive)}
+.arrow-btn{
+  width:36px;height:36px;border-radius:10px;border:none;
+  background:rgba(255,255,255,.03);color:var(--muted-fg);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;margin-left:8px;
+}
+.camp-card:hover .arrow-btn{background:color-mix(in oklab,var(--primary) 10%,transparent);color:var(--primary)}
+
+/* STATUS PILLS */
+.pill-active{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid color-mix(in oklab,var(--success) 25%,transparent);
+  background:color-mix(in oklab,var(--success) 10%,transparent);
+  color:var(--success);border-radius:99px;
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;
+}
+.pill-active-dot{width:4px;height:4px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+.pill-paused{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);
+  color:var(--muted-fg);border-radius:99px;
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;
+}
+
+/* ─── IMPORT CARD ─── */
+.import-card{
+  display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px;
+  border-style:dashed;border-color:color-mix(in oklab,var(--primary) 30%,transparent);
+  background:color-mix(in oklab,var(--primary) 4%,transparent);
+}
+.import-icon{
+  width:48px;height:48px;border-radius:12px;flex-shrink:0;
+  background:color-mix(in oklab,var(--primary) 15%,transparent);
+  color:var(--primary);display:flex;align-items:center;justify-content:center;
+}
+.import-card-btn{
+  border:1px solid color-mix(in oklab,var(--primary) 30%,transparent);
+  background:color-mix(in oklab,var(--primary) 10%,transparent);
+  color:var(--primary);border-radius:10px;padding:8px 16px;font-size:12px;
+  font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;
+}
+.import-card-btn:hover{background:color-mix(in oklab,var(--primary) 20%,transparent)}
+
+/* ─── EDITOR ─── */
+.back-link{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;
+  color:var(--muted-fg);text-decoration:none;cursor:pointer;background:none;border:none;
+  margin-bottom:12px;padding:0;transition:color .15s;
+}
+.back-link:hover{color:var(--foreground)}
+.editor-title-row{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.editor-h1{font-size:clamp(26px,4vw,36px);font-weight:600;letter-spacing:-.025em}
+.editor-meta{font-size:13px;color:var(--muted-fg);margin-top:4px}
+.editor-hdr{display:flex;flex-direction:column;gap:4px;margin-bottom:32px}
+@media(min-width:768px){
+  .editor-hdr{flex-direction:row;align-items:flex-end;justify-content:space-between}
+}
+.editor-hdr-right{display:flex;align-items:center;gap:12px}
+.editor-grid{display:grid;grid-template-columns:1fr;gap:24px}
+@media(min-width:1024px){.editor-grid{grid-template-columns:5fr 7fr;align-items:start}}
+
+.section-title{font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:20px}
+.field-label{font-size:12px;font-weight:600;color:rgba(255,255,255,.8)}
+.field-hint{font-size:11px;color:var(--muted-fg)}
+.field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.field-group{margin-bottom:20px}
+.input-base{
+  width:100%;background:var(--input-bg);border:1px solid var(--border);
+  border-radius:12px;padding:10px 14px;font-size:14px;color:var(--foreground);
+  font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;
+  color-scheme:dark;
+}
+.input-base option{background:oklch(0.19 0.015 285);color:oklch(0.985 0 0)}
+.input-base:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent);box-shadow:0 0 0 3px color-mix(in oklab,var(--primary) 20%,transparent)}
+.input-base::placeholder{color:var(--muted-fg)}
+.input-mono{font-family:'JetBrains Mono',monospace;font-size:12px}
+textarea.input-base{resize:vertical;min-height:88px}
+.input-row{display:flex;gap:8px}
+.input-row .input-base{flex:1}
+.token-hint{font-size:11px;margin-top:5px;display:none}
+.token-hint.ok{color:var(--success);display:flex;align-items:center;gap:4px}
+.token-hint.err{color:var(--destructive);display:flex;align-items:center;gap:4px}
+
+/* STATUS TOGGLE */
+.status-toggle{
+  width:100%;border:1px solid;border-radius:12px;padding:10px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-size:13px;font-weight:500;transition:all .15s;
+}
+.status-toggle.on{
+  background:color-mix(in oklab,var(--success) 10%,transparent);
+  border-color:color-mix(in oklab,var(--success) 25%,transparent);
+  color:var(--success);
+}
+.status-toggle.off{background:rgba(255,255,255,.04);border-color:var(--border);color:var(--muted-fg)}
+.status-dot{width:6px;height:6px;border-radius:50%}
+.status-toggle.on .status-dot{background:var(--success);animation:pulse 2s infinite}
+.status-toggle.off .status-dot{background:var(--muted-fg)}
+
+/* ─── SCHEDULE PANEL ─── */
+.sched-panel{overflow:hidden}
+.sched-header{
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.02);padding:16px 24px;
+}
+.sched-hdr-title{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-fg)}
+.sched-hdr-sub{font-size:13px;font-weight:600;margin-top:2px}
+.sched-pills{display:flex;flex-wrap:wrap;gap:8px}
+.count-pill{
+  display:inline-flex;align-items:center;gap:6px;border-radius:99px;
+  font-size:11px;font-weight:600;padding:4px 10px;border:1px solid;
+}
+.cp-info{background:color-mix(in oklab,var(--info) 10%,transparent);color:var(--info);border-color:color-mix(in oklab,var(--info) 20%,transparent)}
+.cp-pink{background:color-mix(in oklab,var(--pink) 10%,transparent);color:var(--pink);border-color:color-mix(in oklab,var(--pink) 20%,transparent)}
+.cp-warn{background:color-mix(in oklab,var(--warn) 10%,transparent);color:var(--warn);border-color:color-mix(in oklab,var(--warn) 20%,transparent)}
+.cp-muted{background:rgba(255,255,255,.04);color:var(--muted-fg);border-color:var(--border)}
+
+.sched-scroll{max-height:520px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.sched-wrap{border-bottom:1px solid var(--border)}
+.sched-wrap:last-child{border-bottom:none}
+.sched-row{
+  display:flex;align-items:center;gap:16px;padding:12px 24px;
+  transition:background .15s;cursor:default;
+}
+.sched-row:hover{background:rgba(255,255,255,.02)}
+.sched-time{width:56px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--muted-fg);flex-shrink:0}
+.sched-mid{display:flex;flex:1;align-items:center;gap:12px;min-width:0}
+
+/* slot expand */
+.slot-expand{
+  display:none;padding:0 24px 14px;
+  border-top:1px solid var(--border);
+  background:rgba(255,255,255,.015);
+}
+.slot-expand.open{display:block}
+.slot-msg{
+  width:100%;background:var(--input-bg);border:1px solid var(--border);
+  border-radius:10px;padding:9px 12px;font-size:13px;color:var(--foreground);
+  font-family:inherit;outline:none;resize:vertical;min-height:72px;
+  transition:border-color .15s;color-scheme:dark;margin-bottom:8px;
+}
+.slot-msg:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent)}
+.slot-msg::placeholder{color:var(--muted-fg)}
+.slot-thumb{width:36px;height:36px;border-radius:6px;object-fit:cover;flex-shrink:0;border:1px solid var(--border);cursor:pointer}
+.slot-preview-img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);display:block;cursor:zoom-in}
+#imgLightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:99999;cursor:zoom-out;backdrop-filter:blur(8px)}
+#imgLightbox img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 60px rgba(0,0,0,.8)}
+.slot-media-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.slot-media-name{font-size:11px;color:var(--muted-fg);font-family:'JetBrains Mono',monospace;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-upload-btn{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  color:var(--muted-fg);padding:5px 10px;cursor:pointer;position:relative;overflow:hidden;
+  transition:background .15s,color .15s;white-space:nowrap;flex-shrink:0;
+}
+.slot-upload-btn:hover{background:rgba(255,255,255,.08);color:var(--foreground)}
+.slot-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.slot-gallery-btn{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  color:var(--muted-fg);padding:5px 10px;cursor:pointer;
+  transition:background .15s,color .15s;white-space:nowrap;flex-shrink:0;
+}
+.slot-gallery-btn:hover{background:rgba(255,255,255,.08);color:var(--foreground)}
+.slot-bottom-row{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.slot-ai-btn{
+  font-size:11px;font-weight:700;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 25%,transparent);
+  color:var(--primary);border-radius:8px;padding:5px 12px;cursor:pointer;
+  transition:background .15s;
+}
+.slot-ai-btn:hover{background:color-mix(in oklab,var(--primary) 22%,transparent)}
+.chevron-btn{
+  width:24px;height:24px;border-radius:6px;border:none;background:transparent;
+  color:var(--muted-fg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:color .15s,transform .2s;font-size:11px;flex-shrink:0;
+}
+.chevron-btn.open{transform:rotate(180deg)}
+.chevron-btn:hover{color:var(--foreground)}
+.type-chip{
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  border:1px solid;
+}
+.tc-info{background:color-mix(in oklab,var(--info) 15%,transparent);color:var(--info);border-color:color-mix(in oklab,var(--info) 25%,transparent)}
+.tc-pink{background:color-mix(in oklab,var(--pink) 15%,transparent);color:var(--pink);border-color:color-mix(in oklab,var(--pink) 25%,transparent)}
+.tc-warn{background:color-mix(in oklab,var(--warn) 15%,transparent);color:var(--warn);border-color:color-mix(in oklab,var(--warn) 25%,transparent)}
+.tc-muted{background:rgba(255,255,255,.06);color:var(--muted-fg);border-color:var(--border)}
+
+.type-sel{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:10px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--foreground);
+  cursor:pointer;transition:background .15s;
+}
+.type-sel select{background:oklch(0.19 0.015 285);border:none;color:var(--foreground);font-size:inherit;font-weight:inherit;font-family:inherit;outline:none;cursor:pointer;padding-right:4px}
+.type-sel select option{background:oklch(0.19 0.015 285);color:var(--foreground)}
+.type-sel:hover{background:rgba(255,255,255,.06)}
+
+.sched-actions{display:flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s}
+.sched-row:hover .sched-actions{opacity:1}
+.sa-btn{
+  width:28px;height:28px;border-radius:8px;border:none;background:transparent;
+  color:var(--muted-fg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;font-size:12px;
+}
+.sa-btn.ai:hover{background:color-mix(in oklab,var(--primary) 15%,transparent);color:var(--primary)}
+.sa-btn.play:hover{background:color-mix(in oklab,var(--success) 15%,transparent);color:var(--success)}
+.sa-btn.del:hover{background:color-mix(in oklab,var(--destructive) 15%,transparent);color:var(--destructive)}
+
+.sched-footer{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  border-top:1px solid var(--border);background:rgba(255,255,255,.02);padding:16px;
+}
+.sched-add-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px dashed var(--border);border-radius:12px;background:transparent;
+  padding:10px;font-size:12px;font-weight:600;color:var(--muted-fg);cursor:pointer;
+  transition:all .15s;
+}
+.sched-add-btn:hover{border-color:color-mix(in oklab,var(--primary) 40%,transparent);color:var(--foreground)}
+.sched-ai-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(135deg,
+    color-mix(in oklab,var(--primary) 20%,transparent),
+    color-mix(in oklab,var(--primary-glow) 20%,transparent));
+  border:1px solid color-mix(in oklab,var(--primary) 30%,transparent);
+  border-radius:12px;padding:10px;font-size:12px;font-weight:700;
+  color:var(--primary);cursor:pointer;transition:all .15s;
+}
+.sched-ai-btn:hover{background:linear-gradient(135deg,color-mix(in oklab,var(--primary) 30%,transparent),color-mix(in oklab,var(--primary-glow) 30%,transparent))}
+.sched-ai-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ─── LOGS ─── */
+.log-entry{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);margin-bottom:8px;font-size:12px}
+.log-entry.ok .log-msg{color:var(--success)}
+.log-entry.fail .log-msg{color:var(--destructive)}
+.log-time{font-size:11px;color:var(--muted-fg);margin-top:3px;font-family:'JetBrains Mono',monospace}
+
+/* ─── MODAL ─── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid color-mix(in oklab,var(--border) 150%,transparent);border-radius:var(--radius);padding:24px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:20px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.time-input{
+  width:100%;background:var(--input-bg);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;font-size:24px;font-weight:600;
+  color:var(--foreground);font-family:'JetBrains Mono',monospace;
+  text-align:center;outline:none;transition:border-color .15s;
+}
+.time-input:focus{border-color:color-mix(in oklab,var(--primary) 60%,transparent)}
+.upload-zone{
+  border:1px dashed var(--border);border-radius:12px;padding:14px;
+  text-align:center;color:var(--muted-fg);font-size:12px;cursor:pointer;
+  transition:all .15s;position:relative;
+}
+.upload-zone:hover{border-color:color-mix(in oklab,var(--primary) 40%,transparent);color:var(--foreground);background:color-mix(in oklab,var(--primary) 4%,transparent)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.previews{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.prev-img{width:52px;height:52px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
+.prev-badge{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted-fg)}
+.gen-copy-row{display:flex;gap:8px;align-items:flex-start}
+.gen-copy-row textarea{flex:1}
+.copy-ai-btn{
+  background:color-mix(in oklab,var(--primary) 15%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 30%,transparent);
+  color:var(--primary);border-radius:10px;padding:8px 12px;font-size:12px;
+  font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s;
+}
+.copy-ai-btn:hover{background:color-mix(in oklab,var(--primary) 25%,transparent)}
+
+/* ─── GALLERY ─── */
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.gal-item{
+  border-radius:12px;overflow:hidden;
+  border:1px solid var(--border);position:relative;aspect-ratio:1;cursor:pointer;
+  transition:border-color .15s;
+}
+.gal-item:hover{border-color:color-mix(in oklab,var(--primary) 40%,transparent)}
+.gal-item img,.gal-item video{width:100%;height:100%;object-fit:cover;display:block;background:var(--surface)}
+.gal-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.6),transparent);
+  opacity:0;transition:opacity .2s;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:10px;
+}
+.gal-item:hover .gal-overlay{opacity:1}
+.gal-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gal-corner{
+  position:absolute;top:8px;right:8px;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(4px);
+  border-radius:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  color:rgba(255,255,255,.7);font-size:11px;
+}
+.gal-posted{
+  position:absolute;top:8px;left:8px;
+  background:color-mix(in oklab,var(--success) 80%,rgba(0,0,0,.5));
+  border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;color:#fff;
+  letter-spacing:.04em;
+}
+.gal-del{
+  position:absolute;bottom:8px;right:8px;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  border-radius:8px;padding:3px 8px;font-size:11px;color:rgba(255,255,255,.7);
+  border:none;cursor:pointer;opacity:0;transition:opacity .2s,color .15s;
+}
+.gal-item:hover .gal-del{opacity:1}
+.gal-del:hover{color:#fff}
+.gal-item.selectable:hover{border-color:var(--success)}
+
+/* ─── DAY FOLDERS ─── */
+.day-folders{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+.day-folder-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);
+  background:linear-gradient(180deg,color-mix(in oklab,var(--surface) 90%,transparent),color-mix(in oklab,var(--surface) 70%,transparent));
+  backdrop-filter:blur(8px);}
+.day-folder-header{
+  display:flex;align-items:center;gap:16px;padding:16px 20px;cursor:pointer;
+  transition:background .15s;
+}
+.day-folder-header:hover{background:rgba(255,255,255,.03)}
+.day-folder-icon{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 20%,transparent);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.day-folder-info{flex:1;min-width:0}
+.day-folder-date{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.day-folder-sub{font-size:12px;color:var(--muted-fg);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.day-folder-right{display:flex;align-items:center;gap:8px}
+.badge-posted{
+  display:inline-flex;align-items:center;gap:4px;border-radius:99px;
+  background:color-mix(in oklab,var(--success) 10%,transparent);
+  border:1px solid color-mix(in oklab,var(--success) 25%,transparent);
+  color:var(--success);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 8px;
+}
+.badge-pending{
+  display:inline-flex;align-items:center;gap:4px;border-radius:99px;
+  background:color-mix(in oklab,var(--warn) 10%,transparent);
+  border:1px solid color-mix(in oklab,var(--warn) 25%,transparent);
+  color:var(--warn);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 8px;
+}
+.day-chevron{transition:transform .2s;color:var(--muted-fg)}
+.day-folder-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
+.day-folder-body.open{display:block}
+.day-upload-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin-bottom:12px}
+.day-upload-label{
+  display:inline-flex;align-items:center;gap:6px;
+  background:color-mix(in oklab,var(--primary) 12%,transparent);
+  border:1px solid color-mix(in oklab,var(--primary) 25%,transparent);
+  color:var(--primary);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;
+  transition:background .15s;white-space:nowrap;
+}
+.day-upload-label:hover{background:color-mix(in oklab,var(--primary) 20%,transparent)}
+.day-camp-sel{
+  font-family:'Inter',sans-serif;font-size:13px;color:var(--foreground);
+  background:oklch(0.19 0.015 285);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;color-scheme:dark;outline:none;
+}
+.day-camp-sel option{background:oklch(0.19 0.015 285);color:var(--foreground);}
+
+/* STORAGE BAR */
+.storage-card{padding:20px;margin-bottom:24px}
+.storage-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted-fg);margin-bottom:8px}
+.storage-track{height:3px;background:rgba(255,255,255,.08);border-radius:99px}
+.storage-fill{height:3px;border-radius:99px;background:var(--primary);transition:width .4s}
+
+/* ─── DAY NAV CHIPS ─── */
+.day-chip{
+  display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+  border-radius:10px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--muted-fg);
+  padding:6px 10px;cursor:pointer;transition:background .15s,border-color .15s,color .15s;
+  min-width:44px;
+}
+.day-chip:hover{background:rgba(255,255,255,.06);color:var(--foreground)}
+.day-chip.active{
+  background:color-mix(in oklab,var(--primary) 15%,transparent);
+  border-color:color-mix(in oklab,var(--primary) 40%,transparent);
+  color:var(--primary);
+}
+.day-chip-num{font-size:14px;font-weight:700;line-height:1}
+.day-chip-wd{font-size:9px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.day-chip-dot{width:5px;height:5px;border-radius:50%;background:var(--success);margin-top:2px;display:none}
+.day-chip.has-photos .day-chip-dot{display:block}
+.day-chip-del{
+  display:none;position:absolute;top:-6px;right:-6px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--destructive);border:none;color:#fff;
+  font-size:9px;cursor:pointer;align-items:center;justify-content:center;line-height:1;
+}
+.day-chip:hover .day-chip-del{display:flex}
+
+/* ─── PROGRESS ─── */
+.gen-progress{height:2px;background:rgba(255,255,255,.08);border-radius:1px;margin:12px 0;display:none}
+.gen-bar{height:2px;background:linear-gradient(90deg,var(--primary),var(--primary-glow));border-radius:1px;transition:width .3s}
+
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--surface-2);border:1px solid color-mix(in oklab,var(--border) 200%,transparent);
+  border-radius:12px;padding:12px 18px;font-size:13px;color:var(--foreground);
+  display:none;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:320px;
+}
+#toast.show{display:block;animation:slide-up .2s ease}
+#toast.success{border-color:color-mix(in oklab,var(--success) 40%,transparent);color:var(--success)}
+#toast.error{border-color:color-mix(in oklab,var(--destructive) 40%,transparent);color:var(--destructive)}
+#toast.info{border-color:color-mix(in oklab,var(--primary) 40%,transparent);color:var(--primary)}
+@keyframes slide-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ─── EMPTY ─── */
+.empty{text-align:center;padding:64px 20px;color:var(--muted-fg)}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.25}
+.empty h3{font-size:15px;font-weight:500;color:var(--foreground);margin-bottom:6px}
+
+/* ─── SVG ICONS ─── */
+svg.ico{display:block;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-left">
+      <a class="logo" href="#" onclick="showList();return false">
+        <div class="logo-icon">
+          <!-- Send icon -->
+          <svg viewBox="0 0 24 24" class="ico" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">TeleFluxo</span>
+          <span class="logo-sub">Gestor Telegram</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <button class="nav-link active" id="nav-camps" onclick="showList()">Campanhas</button>
+        <button class="nav-link" id="nav-gallery" onclick="showGallery()">Galeria</button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="bot-badge">
+        <span class="bot-dot"></span>
+        Bot online
+      </div>
+      <div class="avatar-circle"></div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════ LIST VIEW ═══════════ -->
+<div id="listView">
+<main>
+  <div style="display:flex;flex-direction:column;gap:24px;margin-bottom:40px">
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div class="page-eyebrow"><span class="eyebrow-dot"></span>Painel de operação</div>
+          <h1 class="page-h1">Campanhas</h1>
+          <p class="page-desc">Orquestre seus canais Telegram com cronogramas automatizados, reações inteligentes e enquetes geradas por IA.</p>
+        </div>
+        <button class="btn-grad" onclick="showNew()">
+          <svg viewBox="0 0 24 24" class="ico" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova campanha
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="card stat-card"><div class="stat-label">Campanhas</div><div class="stat-value" id="statTotal">0</div></div>
+    <div class="card stat-card"><div class="stat-label">Ativas</div><div class="stat-value accent" id="statActive">0</div></div>
+    <div class="card stat-card"><div class="stat-label">Horários totais</div><div class="stat-value" id="statSchedules">0</div></div>
+    <div class="card stat-card"><div class="stat-label">Posts hoje</div><div class="stat-value" id="statToday">0</div></div>
+  </div>
+
+  <!-- Grok key panel -->
+  <div class="card grok-panel" id="grokPanel">
+    <div class="grok-left">
+      <div class="grok-icon">
+        <svg viewBox="0 0 24 24" class="ico" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div>
+        <div class="grok-title">
+          Chave API Grok / xAI
+          <span class="badge-configured" id="grokBadge" style="display:none">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg>
+            Configurada
+          </span>
+        </div>
+        <p class="grok-desc">Usada por todas as campanhas para gerar copys, enquetes e legendas com IA. Crie a sua em <a href="https://console.x.ai" target="_blank">console.x.ai</a>.</p>
+      </div>
+    </div>
+    <div class="grok-right">
+      <input type="password" id="globalXai" class="input-base input-mono" placeholder="xai-..." oninput="onGrokInput()" style="flex:1"/>
+      <button class="btn-sm" onclick="saveGrokKey()">Salvar</button>
+    </div>
+  </div>
+
+  <!-- Campaign cards -->
+  <div class="camp-list" id="campCards"></div>
+</main>
+</div>
+
+<!-- ═══════════ EDITOR VIEW ═══════════ -->
+<div id="editorView" style="display:none">
+<main>
+  <div class="editor-hdr">
+    <div>
+      <button class="back-link" onclick="showList()">
+        <svg viewBox="0 0 24 24" class="ico" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar para campanhas
+      </button>
+      <div class="editor-title-row">
+        <h1 class="editor-h1" id="editorTitle">Nova Campanha</h1>
+        <span id="editorStatusBadge" style="display:none"></span>
+      </div>
+      <p class="editor-meta" id="editorMeta"></p>
+    </div>
+    <div class="editor-hdr-right">
+      <button class="btn-outline" id="testBtn" onclick="testConn()" style="display:none">Testar bot</button>
+      <button class="btn-grad" onclick="saveCamp()">Salvar alterações</button>
+    </div>
+  </div>
+
+  <div class="editor-grid">
+    <!-- LEFT -->
+    <div style="display:flex;flex-direction:column;gap:24px">
+      <div class="card" style="padding:24px">
+        <div class="section-title">Informações Gerais</div>
+        <div class="field-group">
+          <div class="field-row"><label class="field-label">Nome da campanha</label></div>
+          <input id="fName" class="input-base" placeholder="Nome da campanha"/>
+        </div>
+        <div class="field-group">
+          <div class="field-row"><label class="field-label">Descrição</label></div>
+          <textarea id="fDesc" class="input-base" rows="3" placeholder="Descrição opcional"></textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-row"><label class="field-label">Status</label></div>
+          <button id="statusBtn" class="status-toggle on" onclick="toggleStatus()">
+            <span class="status-dot"></span><span id="statusTxt">Ativo</span>
+          </button>
+        </div>
+        <div class="field-group" style="margin-bottom:0">
+          <div class="field-row"><label class="field-label">Persona do canal</label></div>
+          <textarea id="fPersona" class="input-base" rows="3" placeholder="Ex: Canal de moda feminina, tom descontraído..."></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="padding:24px">
+        <div class="section-title">Credenciais</div>
+        <div class="field-group">
+          <div class="field-row">
+            <label class="field-label">Bot Token</label>
+            <span class="field-hint token-hint" id="tokenHint"></span>
+          </div>
+          <div class="input-row">
+            <input id="fToken" type="password" class="input-base input-mono" placeholder="123456789:ABC..." oninput="clearTokenStatus()"/>
+            <button class="btn-sm" onclick="validateToken()">Validar</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-row"><label class="field-label">Chat ID</label></div>
+          <input id="fChat" class="input-base input-mono" placeholder="-100..."/>
+        </div>
+        <!-- Chave Grok removida — usar a chave global da tela de campanhas -->
+        <div class="field-group" style="margin-top:12px;margin-bottom:0">
+          <div class="field-row"><label class="field-label">URL do botão CTA</label></div>
+          <input id="fCtaUrl" class="input-base" placeholder="https://t.me/... (deixe vazio para não usar)"/>
+          <div class="field-hint" style="margin-top:4px">Botão que aparece em todos os posts. O texto é gerado pela IA para cada post.</div>
+        </div>
+      </div>
+
+      <div class="card" id="logsSection" style="padding:24px;display:none">
+        <div class="section-title">Logs recentes</div>
+        <div id="logsList"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT — Schedule -->
+    <div class="card sched-panel" style="position:sticky;top:76px">
+
+      <!-- Day navigator -->
+      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-fg);margin-bottom:10px">Dias configurados</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <div id="dayNavChips" style="display:contents"></div>
+          <button onclick="addNextDay()" title="Adicionar próximo dia" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;height:52px;border-radius:10px;border:1px dashed color-mix(in oklab,var(--primary) 40%,transparent);background:color-mix(in oklab,var(--primary) 6%,transparent);color:var(--primary);cursor:pointer;font-size:20px;font-weight:300;transition:background .15s" onmouseover="this.style.background='color-mix(in oklab,var(--primary) 14%,transparent)'" onmouseout="this.style.background='color-mix(in oklab,var(--primary) 6%,transparent)'">+</button>
+        </div>
+      </div>
+
+      <div class="sched-header">
+        <div>
+          <div class="sched-hdr-title">Cronograma</div>
+          <div class="sched-hdr-sub" id="schedDayLabel">Selecione um dia</div>
+        </div>
+        <div class="sched-pills" id="schedPills"></div>
+      </div>
+      <div class="gen-progress" id="genProgress"><div class="gen-bar" id="genBar" style="width:0%"></div></div>
+      <div class="sched-scroll" id="schedList"></div>
+
+
+<div class="sched-footer">
+        <button class="sched-add-btn" onclick="openModal()">
+          <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Adicionar horário
+        </button>
+        <button class="sched-ai-btn" id="genDayBtn" onclick="openGenDayModal()">
+          <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Gerar dia completo com IA
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- ═══════════ GALLERY VIEW ═══════════ -->
+<div id="galleryView" style="display:none">
+<main>
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:32px">
+    <div>
+      <div class="page-eyebrow" style="margin-bottom:12px"><span class="eyebrow-dot"></span>Banco de mídias por dia</div>
+      <h1 class="page-h1">Galeria</h1>
+      <p class="page-desc">Organize fotos por dia. O sistema posta automaticamente a próxima foto disponível de cada pasta.</p>
+    </div>
+    <button class="btn-grad" onclick="openNewDayModal()">
+      <svg viewBox="0 0 24 24" class="ico" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Novo Dia
+    </button>
+  </div>
+
+  <!-- Filtro de campanha -->
+  <div class="card" style="padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--muted-fg);font-weight:500;white-space:nowrap">Ver status de:</span>
+    <select id="galCampSel" class="day-camp-sel" style="flex:1;min-width:180px" onchange="loadMedia()">
+      <option value="">— Nenhuma campanha —</option>
+    </select>
+    <div class="storage-row" style="margin:0;white-space:nowrap">
+      <span id="storageText" style="font-size:12px;color:var(--muted-fg)">— / 1 GB</span>
+    </div>
+    <div class="storage-track" style="flex:1;min-width:100px"><div class="storage-fill" id="storageFill" style="width:0%"></div></div>
+  </div>
+
+  <div id="dayFolders" class="day-folders"></div>
+</main>
+</div>
+
+<!-- ═══════════ GERAR DIA MODAL ═══════════ -->
+<div class="modal-overlay" id="genDayChoiceModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Gerar dia completo com IA</div>
+    <p style="font-size:13px;color:var(--muted-fg);margin-bottom:18px">Quais horários você quer gerar?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-grad" style="justify-content:flex-start;gap:12px;padding:14px 18px;text-align:left" onclick="closeGenDayModal();generateDay(false)">
+        <span style="font-size:20px">📅</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">Dia inteiro</div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px">Gera todos os horários configurados</div>
+        </div>
+      </button>
+      <button class="btn-outline" style="justify-content:flex-start;gap:12px;padding:14px 18px;text-align:left" onclick="closeGenDayModal();generateDay(true)">
+        <span style="font-size:20px">⏱️</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">A partir de agora</div>
+          <div style="font-size:12px;opacity:.7;margin-top:2px" id="genDayFromNowLabel">Apenas horários futuros</div>
+        </div>
+      </button>
+    </div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn-outline" onclick="closeGenDayModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ NEW DAY MODAL ═══════════ -->
+<div class="modal-overlay" id="newDayModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title">Criar pasta de dia</div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label">Data</label></div>
+      <input type="date" id="newDayInput" class="input-base"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeNewDayModal()">Cancelar</button>
+      <button class="btn-grad" onclick="createDayFolder()">Criar pasta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ GALLERY PICKER ═══════════ -->
+<div class="modal-overlay" id="galleryPicker">
+  <div class="modal" style="max-width:720px;width:95vw">
+    <div class="modal-title">Escolher da galeria</div>
+    <div id="pickerDayList" style="display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;padding-right:2px"></div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeGalleryPicker()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════ ADD SCHEDULE MODAL ═══════════ -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">Adicionar horário</div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label">Horário</label></div>
+      <input type="time" id="mTime" class="time-input" value="08:00"/>
+    </div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label">Tipo de post</label></div>
+      <select id="mType" class="input-base" onchange="onTypeChange()">
+        <option value="image">🖼️ Imagem</option>
+        <option value="video">🎬 Vídeo</option>
+        <option value="text">✍️ Texto</option>
+        <option value="poll">📊 Enquete</option>
+      </select>
+    </div>
+    <div id="mediaGroup" class="field-group">
+      <div class="field-row"><label class="field-label">Mídia</label></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div class="upload-zone" style="flex:1">
+          <input type="file" id="mFile" accept="image/*,video/*" onchange="handleUpload(event)"/>
+          <div>📁 Carregar arquivo</div>
+          <div style="font-size:11px;margin-top:2px;color:var(--muted-fg)">JPG, PNG, GIF, MP4</div>
+        </div>
+        <button class="btn-sm" onclick="openGalleryPicker()" type="button">🖼️ Galeria</button>
+      </div>
+      <div class="previews" id="mPreviews"></div>
+    </div>
+    <div class="field-group">
+      <div class="field-row"><label class="field-label" id="msgLabel">Mensagem / legenda</label></div>
+      <div id="pollHint" style="font-size:11px;color:var(--muted-fg);margin-bottom:6px;display:none">Primeira linha = pergunta · próximas linhas = opções (mín. 2)</div>
+      <div class="gen-copy-row">
+        <textarea id="mMsg" class="input-base" rows="4" placeholder="Texto da mensagem..."></textarea>
+        <button class="copy-ai-btn" onclick="generateCopyModal()" id="genCopyBtn">✨ IA</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn-grad" onclick="addSchedule()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── TYPE META ───
+const TYPE = {
+  image:    {icon:'🖼️', label:'Imagem',  chipCls:'tc-info',  pillCls:'cp-info'},
+  video:    {icon:'🎬', label:'Vídeo',   chipCls:'tc-info',  pillCls:'cp-info'},
+  reaction: {icon:'✍️', label:'Texto',   chipCls:'tc-muted', pillCls:'cp-muted'},
+  poll:     {icon:'📊', label:'Enquete', chipCls:'tc-warn',  pillCls:'cp-warn'},
+  text:     {icon:'✍️', label:'Texto',   chipCls:'tc-muted', pillCls:'cp-muted'},
+};
+
+let campaigns=[], editingId=null, isActive=true, schedules=[];
+let pendingPath=null, pendingName=null;
+let sending=false, logTimer=null;
+
+const DEFAULT_TYPES=['image','text','image','poll','image','image','text','image','image','poll','image','text','image','image','text','image','image','poll','image','image','text','image','image','text'];
+
+function defaultSchedules(){
+  return DEFAULT_TYPES.map((type,h)=>({id:crypto.randomUUID(),time:`${String(h).padStart(2,'0')}:00`,type,msg:'',media_path:'',media_name:'',_idx:h}));
+}
+
+async function api(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch('/api'+path,opts);
+  return r.json();
+}
+async function loadCamps(){campaigns=await api('GET','/campaigns');}
+
+// ─── NAV ───
+function setNav(id){
+  document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('nav-'+id);
+  if(el) el.classList.add('active');
+}
+
+// ─── GALLERY (day-folder system) ───
+let galleryDays=[];
+
+function fmtBytes(b){
+  if(b<1024) return b+' B';
+  if(b<1048576) return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+function fmtDay(iso){ // "2026-06-25" → "25/06/2026 (Quarta)"
+  const [y,m,d]=iso.split('-');
+  const dt=new Date(Number(y),Number(m)-1,Number(d));
+  const days=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  return `${d}/${m}/${y} (${days[dt.getDay()]})`;
+}
+
+async function showGallery(){
+  setNav('gallery');stopLogTimer();
+  document.getElementById('listView').style.display='none';
+  document.getElementById('editorView').style.display='none';
+  document.getElementById('galleryView').style.display='block';
+  document.title='Galeria · TeleFluxo';
+  // populate campaign selector
+  const sel=document.getElementById('galCampSel');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— Nenhuma campanha —</option>';
+  campaigns.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${esc(c.name)}</option>`);
+  if(prev) sel.value=prev;
+  await loadMedia();
+}
+
+async function loadMedia(){
+  const campId=document.getElementById('galCampSel')?.value||'';
+  if(!campId){
+    galleryDays=[];
+    document.getElementById('storageText').textContent='— / 1 GB';
+    document.getElementById('storageFill').style.width='0%';
+    document.getElementById('dayFolders').innerHTML='<div class="empty"><div class="empty-icon">📁</div><h3>Selecione uma campanha</h3><p>Escolha uma campanha acima para ver os dias configurados.</p></div>';
+    return;
+  }
+  const url=`/api/media?campaign_id=${encodeURIComponent(campId)}`;
+  const r=await fetch(url);
+  const data=await r.json();
+  galleryDays=data.days||[];
+  const total=data.total_bytes||0;
+  const limit=data.limit_bytes||1073741824;
+  const pct=Math.min(100,(total/limit)*100);
+  document.getElementById('storageText').textContent=fmtBytes(total)+' / '+fmtBytes(limit);
+  const fill=document.getElementById('storageFill');
+  fill.style.width=pct.toFixed(1)+'%';
+  fill.style.background=pct>80?'var(--destructive)':'var(--primary)';
+  renderDayFolders();
+}
+
+function renderDayFolders(){
+  const container=document.getElementById('dayFolders');
+  if(!galleryDays.length){
+    container.innerHTML='<div class="empty"><div class="empty-icon">📁</div><h3>Nenhuma pasta criada</h3><p>Clique em "Novo Dia" para criar a primeira pasta.</p></div>';
+    return;
+  }
+  container.innerHTML=galleryDays.map((day,di)=>{
+    const pending=day.total-day.posted_count;
+    const badgePosted=day.posted_count?`<span class="badge-posted">✓ ${day.posted_count} postadas</span>`:'';
+    const badgePend=pending?`<span class="badge-pending">${pending} pendentes</span>`:'';
+    const filesHTML=day.files.length
+      ?day.files.map(f=>galItemHTML(f,false,day.day)).join('')
+      :'<p style="color:var(--muted-fg);font-size:12px;padding:12px 0">Nenhuma foto neste dia ainda.</p>';
+    return `<div class="day-folder-card" id="dayCard-${di}">
+      <div class="day-folder-header" onclick="toggleDay(${di})">
+        <div class="day-folder-icon">📅</div>
+        <div class="day-folder-info">
+          <div class="day-folder-date">${fmtDay(day.day)}</div>
+          <div class="day-folder-sub">${day.total} arquivo(s)</div>
+        </div>
+        <div class="day-folder-right">
+          ${badgePosted}${badgePend}
+          <label class="day-upload-label" onclick="event.stopPropagation()">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+            Adicionar fotos
+            <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToDay(event,'${day.day}')"/>
+          </label>
+          <svg class="day-chevron ico" id="chev-${di}" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="day-folder-body" id="dayBody-${di}">
+        <div class="gallery-grid">${filesHTML}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDay(di){
+  const body=document.getElementById('dayBody-'+di);
+  const chev=document.getElementById('chev-'+di);
+  const open=body.classList.toggle('open');
+  chev.style.transform=open?'rotate(180deg)':'';
+}
+
+function galItemHTML(f,selectable,dayPrefix){
+  const isVid=/\.(mp4|mov|avi|webm)$/i.test(f.name);
+  const media=isVid
+    ?`<video src="${esc(f.url)}" preload="none" style="width:100%;height:100%;object-fit:cover"></video>`
+    :`<img src="${esc(f.url)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`;
+  const safePath=(f.path||f.name).replace(/'/g,"\\'");
+  const safeName=(f.name).replace(/'/g,"\\'");
+  const safeUrl=(f.url).replace(/'/g,"\\'");
+  const click=selectable?`onclick="pickMedia('${safeUrl}','${safeName}')"`:'';
+  const del=!selectable?`<button class="gal-del" onclick="deleteMedia('${safePath}',event)">🗑</button>`:'';
+  const posted=f.posted?`<div class="gal-posted">✓ postada</div>`:'';
+  const shortName=f.name.length>18?f.name.slice(0,15)+'…':f.name;
+  return `<div class="gal-item${selectable?' selectable':''}" ${click}>
+    ${media}
+    ${posted}
+    <div class="gal-overlay"><span class="gal-name">${esc(shortName)}</span></div>
+    <div class="gal-corner">${isVid?'🎬':'🖼'}</div>
+    ${del}
+  </div>`;
+}
+
+async function uploadToDay(e,day){
+  const files=Array.from(e.target.files);if(!files.length) return;
+  showToast(`Enviando ${files.length} foto(s) para ${day}…`,'info');
+  let ok=0,fail=0;
+  for(const file of files){
+    try{
+      const fd=new FormData();
+      fd.append('file',file);
+      fd.append('day',day);
+      const r=await fetch('/api/upload',{method:'POST',body:fd});
+      if(r.ok) ok++; else fail++;
+    }catch(err){fail++;}
+  }
+  await loadMedia();
+  e.target.value='';
+  if(fail===0) showToast(`✅ ${ok} arquivo(s) enviado(s)!`,'success');
+  else showToast(`⚠️ ${ok} enviado(s), ${fail} falhou`,'error');
+}
+
+async function deleteMedia(path,e){
+  e.stopPropagation();
+  if(!confirm('Excluir este arquivo?')) return;
+  await fetch('/api/media/'+path,{method:'DELETE'});
+  await loadMedia();showToast('Arquivo excluído','error');
+}
+
+// ─── NEW DAY MODAL ───
+function todayBRT(){
+  return new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+}
+
+function openNewDayModal(){
+  document.getElementById('newDayInput').value=todayBRT();
+  document.getElementById('newDayModal').classList.add('open');
+}
+function closeNewDayModal(){document.getElementById('newDayModal').classList.remove('open');}
+async function createDayFolder(){
+  const day=document.getElementById('newDayInput').value;
+  if(!day){showToast('Selecione uma data','error');return;}
+  const r=await fetch('/api/media/days',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day})});
+  const data=await r.json();
+  closeNewDayModal();
+  await loadMedia();
+  // auto-expand the new day
+  const idx=galleryDays.findIndex(d=>d.day===day);
+  if(idx>=0) toggleDay(idx);
+  showToast('Pasta criada!','success');
+}
+
+// ─── GALLERY PICKER (for schedule slots) ───
+async function openGalleryPicker(){
+  const r=await fetch('/api/media');
+  const data=await r.json();
+  const allDays=data.days||[];
+  const container=document.getElementById('pickerDayList');
+  if(!allDays.length||!allDays.some(d=>d.files.length)){
+    container.innerHTML='<div style="padding:24px;text-align:center;color:var(--muted-fg)">Galeria vazia.</div>';
+  } else {
+    container.innerHTML=allDays.map((day,di)=>{
+      if(!day.files.length) return '';
+      return `<div style="margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--muted-fg);margin-bottom:8px;padding:0 2px">${fmtDay(day.day)}</div>
+        <div class="gallery-grid">${day.files.map(f=>galItemHTML(f,true,day.day)).join('')}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('galleryPicker').classList.add('open');
+}
+function pickMedia(url,name){
+  if(activePickerIdx!==null){
+    const idx=activePickerIdx;activePickerIdx=null;
+    if(schedules[idx]){schedules[idx].media_path=url;schedules[idx].media_name=name;}
+    closeGalleryPicker();
+    renderSchedules();
+    expandedSlots.add(idx);
+    renderSchedules();
+    showToast('Mídia selecionada!','success');
+  } else {
+    pendingPath=url;pendingName=name;
+    const prev=document.getElementById('mPreviews');prev.innerHTML='';
+    const isVid=/\.(mp4|mov|avi|webm)$/i.test(name);
+    if(isVid){const b=document.createElement('div');b.className='prev-badge';b.textContent='🎬 '+name.slice(0,20);prev.appendChild(b);}
+    else{const img=document.createElement('img');img.src=url;img.className='prev-img';prev.appendChild(img);}
+    closeGalleryPicker();showToast('Mídia selecionada!','success');
+  }
+}
+function closeGalleryPicker(){document.getElementById('galleryPicker').classList.remove('open');}
+
+// ─── VIEWS ───
+function showList(){
+  setNav('camps');stopLogTimer();
+  loadCamps().then(()=>{
+    renderCards();
+    document.getElementById('listView').style.display='block';
+    document.getElementById('editorView').style.display='none';
+    document.getElementById('galleryView').style.display='none';
+    document.title='Campanhas · TeleFluxo';
+    loadGrokKey();
+  });
+}
+
+function showNew(){
+  editingId=null;isActive=true;schedules=[];campaignDays={};selectedDay='';expandedSlots=new Set();
+  pendingPath=null;pendingName=null;
+  ['fName','fDesc','fToken','fChat','fPersona','fCtaUrl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('editorTitle').textContent='Nova Campanha';
+  document.getElementById('editorMeta').textContent='';
+  document.getElementById('editorStatusBadge').style.display='none';
+  document.getElementById('testBtn').style.display='none';
+  document.getElementById('tokenHint').className='field-hint token-hint';
+  document.getElementById('logsSection').style.display='none';
+  applyStatus();renderSchedules();
+  document.getElementById('listView').style.display='none';
+  document.getElementById('galleryView').style.display='none';
+  document.getElementById('editorView').style.display='block';
+  document.title='Nova Campanha · TeleFluxo';
+  buildDayNav();renderSchedules();
+}
+
+function showEdit(id){
+  const c=campaigns.find(x=>x.id===id);if(!c) return;
+  editingId=id;isActive=c.active;
+  campaignDays=JSON.parse(JSON.stringify(c.days||{}));
+  selectedDay='';schedules=[];expandedSlots=new Set();
+  // Seleciona o primeiro dia se existir
+  const firstDay=Object.keys(campaignDays).sort()[0];
+  if(firstDay){
+    selectedDay=firstDay;
+    schedules=(campaignDays[firstDay].slots||[]).map((s,i)=>({...s,_idx:i}));
+  }
+  document.getElementById('fName').value=c.name||'';
+  document.getElementById('fDesc').value=c.desc||'';
+  document.getElementById('fToken').value=c.token||'';
+  document.getElementById('fChat').value=c.chat||'';
+  document.getElementById('fPersona').value=c.persona||'';
+  document.getElementById('fCtaUrl').value=c.cta_url||'';
+
+  document.getElementById('editorTitle').textContent=c.name||'Campanha';
+  const _days=Object.keys(c.days||{});const _slots=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
+  document.getElementById('editorMeta').textContent=`${_days.length} dia(s) · ${_slots} horários · Atualizado em ${c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'—'}`;
+  document.getElementById('testBtn').style.display='inline-flex';
+  const th=document.getElementById('tokenHint');
+  th.className='field-hint token-hint ok';
+  th.innerHTML='<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg> Token salvo';
+  const badge=document.getElementById('editorStatusBadge');
+  badge.style.display='inline-flex';
+  badge.className=c.active?'pill-active':'pill-paused';
+  badge.innerHTML=c.active?'<span class="pill-active-dot"></span>Ativo':'Pausado';
+  document.getElementById('logsSection').style.display='none';
+  applyStatus();renderSchedules();renderLogs(c.logs||[]);
+  document.getElementById('listView').style.display='none';
+  document.getElementById('galleryView').style.display='none';
+  document.getElementById('editorView').style.display='block';
+  document.title=`${c.name} · TeleFluxo`;
+  buildDayNav();renderSchedules();
+  startLogTimer();
+}
+
+function toggleStatus(){isActive=!isActive;applyStatus();}
+function applyStatus(){
+  const btn=document.getElementById('statusBtn');
+  btn.className='status-toggle '+(isActive?'on':'off');
+  document.getElementById('statusTxt').textContent=isActive?'Ativo':'Inativo';
+}
+
+// ─── GROK GLOBAL KEY ───
+function loadGrokKey(){
+  const k=localStorage.getItem('global_xai')||'';
+  if(k){document.getElementById('globalXai').value=k;document.getElementById('grokBadge').style.display='inline-flex';}
+  else{document.getElementById('grokBadge').style.display='none';}
+}
+function onGrokInput(){
+  const has=!!document.getElementById('globalXai').value.trim();
+  document.getElementById('grokBadge').style.display=has?'inline-flex':'none';
+}
+function saveGrokKey(){
+  const k=document.getElementById('globalXai').value.trim();
+  localStorage.setItem('global_xai',k);
+  showToast(k?'Chave Grok salva!':'Chave removida','success');
+  document.getElementById('grokBadge').style.display=k?'inline-flex':'none';
+}
+
+// ─── TOKEN VALIDATION ───
+function clearTokenStatus(){
+  document.getElementById('fToken').style.borderColor='';
+  document.getElementById('tokenHint').className='field-hint token-hint';
+  document.getElementById('testBtn').style.display='none';
+}
+
+async function validateToken(){
+  const token=document.getElementById('fToken').value.trim();
+  if(!token){showToast('Informe o token','error');return;}
+  showToast('Validando…','info');
+  const r=await api('POST','/validate-token',{token});
+  const th=document.getElementById('tokenHint');
+  if(r.ok){
+    document.getElementById('fToken').style.borderColor='var(--success)';
+    th.className='field-hint token-hint ok';
+    th.innerHTML=`<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><polyline points="20 6 9 17 4 12"/></svg> @${r.username} — ${r.name}`;
+    document.getElementById('testBtn').style.display='inline-flex';
+    showToast(`Bot @${r.username} encontrado!`,'success');
+  } else {
+    document.getElementById('fToken').style.borderColor='var(--destructive)';
+    th.className='field-hint token-hint err';
+    th.textContent=`✗ ${r.error||'Token inválido'}`;
+    showToast('Token inválido','error');
+  }
+}
+
+
+async function testConn(){
+  if(!editingId){showToast('Salve primeiro','error');return;}
+  const btn=document.getElementById('testBtn');
+  btn.disabled=true;btn.textContent='⏳';
+  const r=await api('POST',`/campaigns/${editingId}/test`);
+  if(r.ok){showToast('✅ Mensagem enviada!','success');}
+  else{showToast(`❌ ${r.error||r.detail||'Erro'}`, 'error');alert(`Erro:\n${r.error||r.detail||JSON.stringify(r)}`);}
+  btn.disabled=false;btn.textContent='Testar bot';
+}
+
+// ─── SCHEDULE RENDER ───
+let expandedSlots=new Set();
+let activePickerIdx=null;
+
+function renderSchedules(){
+  const sorted=[...schedules].sort((a,b)=>a.time.localeCompare(b.time));
+  const isMedia=t=>t==='image'||t==='video';
+  document.getElementById('schedList').innerHTML=sorted.map(s=>{
+    const m=TYPE[s.type]||TYPE.text;
+    const opts=Object.entries(TYPE).map(([k,v])=>`<option value="${k}"${k===s.type?' selected':''}>${v.icon} ${v.label}</option>`).join('');
+    const isOpen=expandedSlots.has(s._idx);
+    const preview=s.msg?s.msg.slice(0,30)+(s.msg.length>30?'…':''):'';
+    const mediaLabel=s.media_name?`📎 ${s.media_name.slice(0,18)}`:'';
+    const previewText=preview||mediaLabel;
+    return `<div class="sched-wrap" id="wrap_${s._idx}">
+      <div class="sched-row">
+        <span class="sched-time">${s.time}</span>
+        <div class="sched-mid">
+          <div class="type-chip ${m.chipCls}">${m.icon}</div>
+          <div class="type-sel"><select onchange="chType(${s._idx},this.value)">${opts}</select></div>
+          ${isMedia(s.type)&&s.media_path?`<img class="slot-thumb" src="${s.media_path}" alt="" onclick="toggleExpand(${s._idx})" title="Ver imagem">`:''}
+          ${previewText?`<span style="font-size:11px;color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">${esc(previewText)}</span>`:''}
+        </div>
+        <div class="sched-actions">
+          <button class="sa-btn ai" title="Gerar copy com IA" onclick="generateCopyInline(${s._idx})">✨</button>
+          ${editingId?`<button class="sa-btn play" title="Enviar agora" onclick="sendNow('${s.id||''}',${s._idx})">▶</button>`:''}
+          <button class="sa-btn del" title="Remover" onclick="rmSched(${s._idx})">✕</button>
+        </div>
+        <button class="chevron-btn${isOpen?' open':''}" onclick="toggleExpand(${s._idx})" title="Editar conteúdo">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+      <div class="slot-expand${isOpen?' open':''}" id="expand_${s._idx}">
+        <div style="padding-top:12px">
+          ${isMedia(s.type)?`
+          ${s.media_path&&s.type==='image'?`<img class="slot-preview-img" src="${s.media_path}" alt="Preview" onclick="openLightbox('${s.media_path}')">`:''}
+          <div class="slot-media-row" style="margin-bottom:8px">
+            <span class="slot-media-name" id="mname_${s._idx}">${s.media_name?esc(s.media_name):'Nenhuma mídia selecionada'}</span>
+            <label class="slot-upload-btn">
+              📁 Upload
+              <input type="file" accept="image/*,video/*" onchange="slotUpload(event,${s._idx})"/>
+            </label>
+            <button class="slot-gallery-btn" onclick="openSlotPicker(${s._idx})">🖼️ Galeria</button>
+            ${s.media_path?`<button class="slot-gallery-btn" onclick="clearSlotMedia(${s._idx})">✕</button>`:''}
+          </div>`:''}
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <textarea class="slot-msg" id="smsg_${s._idx}" placeholder="${s.type==='poll'?'Pergunta (1ª linha) + opções (próximas linhas)':'Mensagem / legenda…'}" oninput="slotMsgChange(${s._idx},this.value)">${esc(s.msg||'')}</textarea>
+            <button class="slot-ai-btn" onclick="generateCopyInline(${s._idx})" title="Gerar com IA">✨ IA</button>
+          </div>
+          ${(()=>{const url=getCampaignCtaUrl();return url&&s.type!=='poll'?`
+          <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+            <span style="font-size:11px;color:var(--muted-fg);white-space:nowrap;min-width:48px">🔗 CTA:</span>
+            <input class="input-base" id="scta_${s._idx}" style="font-size:11px;flex:1" value="${esc(s.cta_label||'')}" placeholder="Gerado pela IA…" oninput="slotCtaChange(${s._idx},this.value)"/>
+          </div>`:'';})()}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pills
+  const counts={};
+  schedules.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
+  document.getElementById('schedPills').innerHTML=Object.entries(counts).map(([t,n])=>{
+    const m=TYPE[t]||TYPE.text;
+    return `<span class="count-pill ${m.pillCls}">${m.icon} ${n} ${m.label.toLowerCase()}</span>`;
+  }).join('');
+}
+
+function toggleExpand(idx){
+  if(expandedSlots.has(idx)) expandedSlots.delete(idx);
+  else expandedSlots.add(idx);
+  renderSchedules();
+  // re-focus textarea if opening
+  if(expandedSlots.has(idx)){
+    const ta=document.getElementById('smsg_'+idx);
+    if(ta){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length);}
+  }
+}
+
+function slotMsgChange(idx,val){
+  if(schedules[idx]) schedules[idx].msg=val;
+}
+function slotCtaChange(idx,val){
+  if(schedules[idx]) schedules[idx].cta_label=val;
+}
+
+async function slotUpload(e,idx){
+  const file=e.target.files[0];if(!file) return;
+  showToast('Enviando…','info');
+  const fd=new FormData();
+  fd.append('file',file);
+  if(selectedDay) fd.append('day',selectedDay);
+  const r=await fetch('/api/upload',{method:'POST',body:fd});
+  const data=await r.json();
+  if(schedules[idx]){schedules[idx].media_path=data.url;schedules[idx].media_name=data.name;}
+  showToast('Mídia enviada!','success');
+  e.target.value='';
+  renderSchedules();
+}
+
+function openSlotPicker(idx){
+  activePickerIdx=idx;
+  openGalleryPicker();
+}
+
+function clearSlotMedia(idx){
+  if(schedules[idx]){schedules[idx].media_path='';schedules[idx].media_name='';}
+  renderSchedules();
+}
+
+
+function chType(idx,type){if(schedules[idx])schedules[idx].type=type;renderSchedules();}
+function rmSched(idx){schedules.splice(idx,1);schedules.forEach((s,i)=>s._idx=i);renderSchedules();}
+
+async function sendNow(schedId,idx){
+  if(sending||!editingId||!schedId||!selectedDay){
+    if(!editingId)showToast('Salve a campanha primeiro','error');
+    else if(!selectedDay)showToast('Selecione um dia','error');
+    return;
+  }
+  sending=true;
+  showToast('Enviando…','info');
+  try{
+    const r=await api('POST',`/campaigns/${editingId}/days/${selectedDay}/send-now`,{slot_id:schedId});
+    if(r.ok) showToast('✅ Enviado!','success');
+    else showToast(`❌ ${r.error||'Erro'}`, 'error');
+  }catch(e){showToast('Erro ao enviar','error');}
+  sending=false;
+}
+
+async function generateCopyInline(idx){
+  const xai=localStorage.getItem('global_xai')||'';
+  const persona=document.getElementById('fPersona').value.trim();
+  if(!xai){showToast('Informe a chave Grok/xAI','error');return;}
+  const s=schedules[idx];
+  // Desabilita botões durante geração
+  const btnRow=document.querySelector(`#wrap_${idx} .sa-btn.ai`);
+  const btnExpand=document.querySelector(`#expand_${idx} .slot-ai-btn`);
+  if(btnRow){btnRow.disabled=true;btnRow.textContent='⏳';}
+  if(btnExpand){btnExpand.disabled=true;btnExpand.textContent='⏳';}
+  // Usa visão se o slot tem imagem/vídeo com media_path
+  const useVision=(s.type==='image'||s.type==='video')&&s.media_path;
+  const used_texts=schedules.filter((_,i)=>i!==idx).map(x=>x.msg).filter(Boolean);
+  let msg='', ctaLabel='';
+  if(useVision){
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:s.media_path,used_texts});
+    msg=r.msg||''; ctaLabel=r.cta_label||'';
+    if(!msg) showToast(`Erro Vision: ${r.vision_err||'falhou'}`,'error');
+  } else {
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type:s.type,media_path:'',used_texts});
+    msg=r.msg||''; ctaLabel=r.cta_label||'';
+    if(!msg) showToast(`Erro Grok: ${r.vision_err||r.error||'falhou'}`,'error');
+  }
+  if(msg){schedules[idx].msg=msg;schedules[idx].cta_label=ctaLabel;renderSchedules();showToast('Copy gerada!','success');}
+  if(btnRow){btnRow.disabled=false;btnRow.textContent='✨';}
+  if(btnExpand){btnExpand.disabled=false;btnExpand.textContent='✨ IA';}
+}
+
+async function generateCopyModal(){
+  const xai=localStorage.getItem('global_xai')||'';
+  const persona=document.getElementById('fPersona').value.trim();
+  if(!xai){showToast('Informe a chave Grok/xAI','error');return;}
+  if(!persona){showToast('Preencha a persona da campanha','error');return;}
+  const btn=document.getElementById('genCopyBtn');
+  btn.disabled=true;btn.textContent='⏳';
+  const type=document.getElementById('mType').value;
+  const used_texts=schedules.map(x=>x.msg).filter(Boolean);
+  const r=await api('POST','/generate-slot-copy',{persona,type,xai_key:xai,media_path:pendingPath||'',used_texts});
+  if(r.ok&&r.msg){
+    document.getElementById('mMsg').value=r.msg;
+    showToast('Copy gerada!','success');
+  } else {
+    showToast(`Erro Grok: ${r.vision_err||r.error||'falhou'}`,'error');
+  }
+  btn.disabled=false;btn.textContent='✨ IA';
+}
+
+function openGenDayModal(){
+  if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
+  // Atualiza label com hora atual BRT
+  const nowBRT=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('genDayFromNowLabel').textContent=`Horários a partir das ${nowBRT} (BRT)`;
+  document.getElementById('genDayChoiceModal').classList.add('open');
+}
+function closeGenDayModal(){
+  document.getElementById('genDayChoiceModal').classList.remove('open');
+}
+
+async function generateDay(fromNow=false){
+  if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
+  const xai=localStorage.getItem('global_xai')||'';
+  if(!xai){showToast('Informe a chave Grok/xAI para gerar copies','error');return;}
+  const persona=document.getElementById('fPersona').value.trim();
+  // Hora atual em BRT
+  const currentHourBRT=parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour:'2-digit',hour12:false}));
+  const futureSlotsCount=fromNow
+    ? schedules.filter(s=>parseInt(s.time)>=currentHourBRT).length
+    : schedules.length;
+  if(futureSlotsCount>0){
+    const msg=fromNow
+      ? `Isso vai substituir ${futureSlotsCount} horário(s) a partir das ${currentHourBRT}h do dia ${selectedDay}. Continuar?`
+      : `Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`;
+    if(!confirm(msg)) return;
+  }
+
+  const btn=document.getElementById('genDayBtn');
+  const prog=document.getElementById('genProgress');
+  const bar=document.getElementById('genBar');
+  btn.disabled=true;
+  prog.style.display='block';
+  bar.style.width='0%';
+
+  if(fromNow){
+    // Mantém slots passados, remove apenas os futuros
+    schedules=schedules.filter(s=>parseInt(s.time)<currentHourBRT);
+    campaignDays[selectedDay]={slots:[...schedules]};
+  } else {
+    // Limpa tudo
+    schedules=[];
+    campaignDays[selectedDay]={slots:[]};
+  }
+  renderSchedules();
+
+  try{
+    // 1. Busca configuração dos slots (com fotos atribuídas, sem copy)
+    const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs`);
+    if(!cfgRes.ok){showToast('Erro ao carregar configuração','error');btn.disabled=false;prog.style.display='none';return;}
+
+    let configs=cfgRes.configs;
+    if(fromNow && currentHourBRT>=0){
+      configs=configs.filter(c=>c.hour>=currentHourBRT);
+      if(!configs.length){showToast('Nenhum horário futuro para gerar','error');btn.disabled=false;prog.style.display='none';return;}
+    }
+    const total=configs.length;
+
+    // 2. Gera copy para cada slot individualmente — aparece em tempo real
+    for(let i=0;i<configs.length;i++){
+      const cfg=configs[i];
+      btn.textContent=`⏳ ${i+1} / ${total}`;
+      bar.style.width=Math.round((i+1)/total*100)+'%';
+
+      let msg='', ctaLabel='';
+      const used_texts=schedules.map(x=>x.msg).filter(Boolean);
+      const r=await api('POST','/generate-slot-copy',{
+        persona,xai_key:xai,type:cfg.type,media_path:cfg.media_path,used_texts
+      });
+      msg=r.msg||''; ctaLabel=r.cta_label||'';
+
+      const slot={
+        id:cfg.id,
+        time:`${String(cfg.hour).padStart(2,'0')}:00`,
+        type:cfg.type,
+        msg,
+        cta_label:ctaLabel,
+        media_path:cfg.media_path,
+        media_name:cfg.media_name,
+        _idx:schedules.length,
+      };
+      schedules.push(slot);
+      campaignDays[selectedDay].slots=[...schedules];
+      renderSchedules();
+    }
+
+    // 3. Salva tudo no servidor
+    await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{
+      slots:schedules,
+      cta_label:campaignDays[selectedDay]?.cta_label||''
+    });
+    buildDayNav();
+    showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+
+  }catch(e){
+    showToast('Erro de conexão','error');
+  }
+
+  btn.disabled=false;
+  btn.innerHTML='<svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Gerar dia completo com IA';
+  setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
+}
+
+// ─── DAY NAVIGATOR ───
+let selectedDay='';   // YYYY-MM-DD atualmente selecionado
+let campaignDays={};  // {YYYY-MM-DD: {slots:[...]}}
+
+const WEEKDAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function fmtDayChip(iso){
+  const [y,m,d]=iso.split('-');
+  const dt=new Date(Number(y),Number(m)-1,Number(d));
+  const today=new Date().toISOString().slice(0,10);
+  return {num:d, wd:WEEKDAYS[dt.getDay()], isToday:iso===today};
+}
+
+function buildDayNav(){
+  const container=document.getElementById('dayNavChips');
+  if(!container) return;
+  const days=Object.keys(campaignDays).sort();
+  if(!days.length){
+    container.innerHTML='<div style="font-size:12px;color:var(--muted-fg);padding:6px 0">Clique em + para adicionar o primeiro dia.</div>';
+    document.getElementById('schedDayLabel').textContent='Selecione um dia';
+    document.getElementById('schedList').innerHTML='';
+    document.getElementById('schedPills').innerHTML='';
+    return;
+  }
+  container.innerHTML=days.map(iso=>{
+    const {num,wd,isToday}=fmtDayChip(iso);
+    const slots=campaignDays[iso]?.slots||[];
+    const isActive=selectedDay===iso;
+    return `<div class="day-chip${isActive?' active':''}${slots.length?' has-photos':''}" style="position:relative" onclick="selectDay('${iso}')">
+      <span class="day-chip-num">${num}/${iso.slice(5,7)}</span>
+      <span class="day-chip-wd">${isToday?'Hoje':wd}</span>
+      <span class="day-chip-dot"></span>
+      <button class="day-chip-del" onclick="event.stopPropagation();deleteDayChip('${iso}')" title="Excluir dia">✕</button>
+    </div>`;
+  }).join('');
+
+  if(selectedDay){
+    const [y,m,d]=selectedDay.split('-');
+    const slots=campaignDays[selectedDay]?.slots||[];
+    document.getElementById('schedDayLabel').textContent=`${d}/${m}/${y} · ${slots.length} post(s)`;
+  }
+}
+
+function getCampaignCtaUrl(){
+  return document.getElementById('fCtaUrl').value.trim();
+}
+
+function selectDay(iso){
+  if(selectedDay && campaignDays[selectedDay]){
+    campaignDays[selectedDay].slots=[...schedules];
+  }
+  selectedDay=iso;
+  schedules=(campaignDays[iso]?.slots||[]).map((s,i)=>({...s,_idx:i}));
+  expandedSlots=new Set();
+  buildDayNav();
+  renderSchedules();
+}
+
+// ─── ADD / DELETE DAY ───
+async function addNextDay(){
+  if(!editingId){showToast('Salve a campanha primeiro','error');return;}
+  const days=Object.keys(campaignDays).sort();
+  const today=todayBRT();
+  let next;
+  // Se hoje ainda não existe na campanha, cria hoje; senão próximo após o último
+  if(!campaignDays[today]){
+    next=today;
+  } else if(days.length){
+    const last=days[days.length-1];
+    const d=new Date(last+'T12:00:00');
+    d.setDate(d.getDate()+1);
+    next=d.toISOString().slice(0,10);
+  } else {
+    next=today;
+  }
+  if(campaignDays[next]){showToast('Dia já existe','error');return;}
+  const r=await api('POST',`/campaigns/${editingId}/days`,{day:next});
+  if(r.ok){
+    campaignDays[next]={slots:[]};
+    selectDay(next);
+    showToast(`Dia ${next} criado!`,'success');
+  } else {
+    showToast('Erro ao criar dia','error');
+  }
+}
+
+async function deleteDayChip(iso){
+  if(!confirm(`Excluir o dia ${iso} e todos os seus horários?`)) return;
+  const r=await api('DELETE',`/campaigns/${editingId}/days/${iso}`);
+  if(r.ok){
+    delete campaignDays[iso];
+    if(selectedDay===iso){
+      selectedDay='';schedules=[];
+      const remaining=Object.keys(campaignDays).sort();
+      if(remaining.length) selectDay(remaining[0]);
+      else {buildDayNav();renderSchedules();}
+    } else {
+      buildDayNav();
+    }
+    showToast('Dia excluído','error');
+  }
+}
+
+// Alias mantido por compatibilidade
+function deleteSelectedDay(){ if(selectedDay) deleteDayChip(selectedDay); }
+
+// ─── LOGS ───
+function renderLogs(logs){
+  const sec=document.getElementById('logsSection');
+  const list=document.getElementById('logsList');
+  if(!logs||!logs.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  list.innerHTML=logs.slice(0,15).map(l=>`
+    <div class="log-entry ${l.success?'ok':'fail'}">
+      <div class="log-msg">${l.success?'✓':'✗'} ${esc(l.detail||'')}</div>
+      <div class="log-time">${new Date(l.time).toLocaleString('pt-BR')}${l.attempt?` · tentativa ${l.attempt}/5`:''}</div>
+    </div>`).join('');
+}
+function startLogTimer(){
+  stopLogTimer();
+  if(!editingId) return;
+  logTimer=setInterval(async()=>{
+    if(!editingId) return;
+    try{const logs=await api('GET',`/campaigns/${editingId}/logs`);renderLogs(logs);}catch(e){}
+  },5000);
+}
+function stopLogTimer(){clearInterval(logTimer);logTimer=null;}
+
+// ─── MODAL ───
+function onTypeChange(){
+  const t=document.getElementById('mType').value;
+  document.getElementById('mediaGroup').style.display=(t==='image'||t==='video')?'block':'none';
+  document.getElementById('pollHint').style.display=t==='poll'?'block':'none';
+  document.getElementById('msgLabel').textContent=t==='poll'?'Pergunta e opções':'Mensagem / legenda';
+}
+function openModal(){
+  document.getElementById('mTime').value='08:00';
+  document.getElementById('mType').value='image';
+  document.getElementById('mMsg').value='';
+  document.getElementById('mPreviews').innerHTML='';
+  pendingPath=null;pendingName=null;
+  onTypeChange();
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+
+async function handleUpload(e){
+  const file=e.target.files[0];if(!file) return;
+  showToast('Enviando arquivo…','info');
+  const fd=new FormData();fd.append('file',file);
+  const r=await fetch('/api/upload',{method:'POST',body:fd});
+  const data=await r.json();
+  pendingPath=data.url;pendingName=data.name;
+  const prev=document.getElementById('mPreviews');prev.innerHTML='';
+  if(file.type.startsWith('image/')){const img=document.createElement('img');img.src=URL.createObjectURL(file);img.className='prev-img';prev.appendChild(img);}
+  else{const b=document.createElement('div');b.className='prev-badge';b.textContent='🎬 '+file.name.slice(0,20);prev.appendChild(b);}
+  showToast('Arquivo enviado!','success');
+}
+
+async function addSchedule(){
+  const time=document.getElementById('mTime').value;
+  const type=document.getElementById('mType').value;
+  const msg=document.getElementById('mMsg').value.trim();
+  if(!time){showToast('Informe um horário','error');return;}
+  const idx=schedules.length;
+  const slot={id:crypto.randomUUID(),time,type,msg,cta_label:'',media_path:pendingPath,media_name:pendingName,_idx:idx};
+  schedules.push(slot);
+  renderSchedules();closeModal();showToast('Horário adicionado!','success');
+  // Gera CTA se houver URL configurada e mensagem
+  const xai=localStorage.getItem('global_xai')||'';
+  const persona=document.getElementById('fPersona').value.trim();
+  if(getCampaignCtaUrl() && msg && xai && type!=='poll'){
+    const r=await api('POST','/generate-slot-copy',{persona,xai_key:xai,type,media_path:slot.media_path||''});
+    if(r.cta_label){schedules[idx].cta_label=r.cta_label;renderSchedules();}
+  }
+}
+
+// ─── SAVE ───
+async function saveCamp(){
+  const name=document.getElementById('fName').value.trim();
+  const token=document.getElementById('fToken').value.trim();
+  const chat=document.getElementById('fChat').value.trim();
+  if(!name){showToast('Informe o nome','error');return;}
+  if(!token){showToast('Informe o Bot Token','error');return;}
+  if(!chat){showToast('Informe o Chat ID','error');return;}
+  // Salva slots e CTA do dia atual em memória antes de enviar
+  if(selectedDay && campaignDays[selectedDay]){
+    campaignDays[selectedDay].slots=schedules.map(s=>{const c={...s};delete c._idx;return c;});
+  }
+  const body={
+    name,token,chat,
+    desc:document.getElementById('fDesc').value.trim(),
+    persona:document.getElementById('fPersona').value.trim(),
+    cta_url:document.getElementById('fCtaUrl').value.trim(),
+    xai_key:localStorage.getItem('global_xai')||'',
+    active:isActive,
+    days:campaignDays,
+  };
+  let result;
+  if(editingId){result=await api('PUT',`/campaigns/${editingId}`,body);}
+  else{result=await api('POST','/campaigns',body);editingId=result.id;}
+  await loadCamps();
+  const totalSlots=Object.values(campaignDays).reduce((s,d)=>s+(d.slots?.length||0),0);
+  showToast('Campanha salva!','success');
+  document.getElementById('testBtn').style.display='inline-flex';
+  document.getElementById('editorTitle').textContent=name;
+  document.getElementById('editorMeta').textContent=`${Object.keys(campaignDays).length} dia(s) · ${totalSlots} horários · Atualizado em ${new Date().toLocaleDateString('pt-BR')}`;
+  const badge=document.getElementById('editorStatusBadge');
+  badge.style.display='inline-flex';
+  badge.className=isActive?'pill-active':'pill-paused';
+  badge.innerHTML=isActive?'<span class="pill-active-dot"></span>Ativo':'Pausado';
+  const c=campaigns.find(x=>x.id===editingId);
+  if(c) renderLogs(c.logs||[]);
+  startLogTimer();
+}
+
+// ─── CARDS ───
+function initials(name){return name.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';}
+
+function renderCards(){
+  const el=document.getElementById('campCards');
+  const total=campaigns.length;
+  const active=campaigns.filter(c=>c.active).length;
+  const totalSched=campaigns.reduce((s,c)=>s+Object.values(c.days||{}).reduce((a,d)=>a+(d.slots?.length||0),0),0);
+  const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
+  const statToday=campaigns.reduce((s,c)=>s+(c.days?.[today]?.slots?.length||0),0);
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statActive').textContent=active;
+  document.getElementById('statSchedules').textContent=totalSched;
+  document.getElementById('statToday').textContent=statToday;
+
+  if(!campaigns.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><h3>Nenhuma campanha ainda</h3><p>Crie sua primeira campanha para começar.</p></div>';
+    return;
+  }
+
+  el.innerHTML=campaigns.map(c=>{
+    const n=Object.values(c.days||{}).reduce((s,d)=>s+(d.slots?.length||0),0);
+    const d=c.createdAt?new Date(c.createdAt).toLocaleDateString('pt-BR'):'';
+    const statusPill=c.active
+      ?`<span class="pill-active"><span class="pill-active-dot"></span>Ativo</span>`
+      :`<span class="pill-paused">Pausado</span>`;
+    return `<div class="card camp-card" onclick="showEdit('${c.id}')">
+      <div class="camp-stripe"></div>
+      <div class="camp-card-left">
+        <div class="camp-avatar">${esc(initials(c.name||'?'))}</div>
+        <div>
+          <div class="camp-name">${esc(c.name)}${statusPill}</div>
+          <div class="camp-meta">
+            <span>
+              <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              ${n} horário${n!==1?'s':''}
+            </span>
+            ${d?`<span><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${d}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="camp-card-right" onclick="event.stopPropagation()">
+        <button class="icon-btn" title="Editar" onclick="showEdit('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" title="Excluir" onclick="delCamp('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+        <button class="arrow-btn" title="Abrir" onclick="showEdit('${c.id}')">
+          <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Import suggestion card
+  el.innerHTML+=`<div class="card import-card">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="import-icon">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600">Importar canal existente</div>
+        <div style="margin-top:2px;font-size:12px;color:var(--muted-fg)">Cole o link do canal e a IA configura cronograma e persona automaticamente.</div>
+      </div>
+    </div>
+    <button class="import-card-btn" onclick="showNew()">Importar</button>
+  </div>`;
+}
+
+async function delCamp(id){
+  if(!confirm('Excluir esta campanha?')) return;
+  await api('DELETE',`/campaigns/${id}`);
+  await loadCamps();renderCards();showToast('Campanha excluída','error');
+}
+
+// ─── UTILS ───
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='show '+type;
+  clearTimeout(t._t);t._t=setTimeout(()=>t.className='',2800);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ─── INIT ───
+showList();
+
+// ─── LIGHTBOX ───
+function openLightbox(url){
+  let lb=document.getElementById('imgLightbox');
+  if(!lb){
+    lb=document.createElement('div');
+    lb.id='imgLightbox';
+    lb.innerHTML='<img id="imgLightboxImg">';
+    lb.addEventListener('click',closeLightbox);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+    document.body.appendChild(lb);
+  }
+  document.getElementById('imgLightboxImg').src=url;
+  lb.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeLightbox(){
+  const lb=document.getElementById('imgLightbox');
+  if(lb){lb.style.display='none';}
+  document.body.style.overflow='';
+}
+</script>
+</body>

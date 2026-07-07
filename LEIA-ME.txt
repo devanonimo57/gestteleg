@@ -1,0 +1,57 @@
+==============================
+  GESTOR TELEGRAM - SETUP
+==============================
+
+REQUISITOS:
+  - Python 3.8 ou superior
+  - Pip instalado
+
+-------------------------------
+INSTALAÇÃO (faça só uma vez):
+-------------------------------
+
+1. Abra o terminal na pasta do projeto
+
+2. Instale as dependências:
+   pip install -r requirements.txt
+
+-------------------------------
+COMO RODAR:
+-------------------------------
+
+3. Inicie o servidor:
+   python app.py
+
+4. Abra no navegador:
+   http://localhost:5000
+
+-------------------------------
+COMO CRIAR SEU BOT NO TELEGRAM:
+-------------------------------
+
+1. Abra o Telegram e procure @BotFather
+2. Envie /newbot
+3. Escolha um nome para o bot
+4. Copie o TOKEN que o BotFather enviar
+5. Para descobrir o Chat ID do seu canal:
+   - Adicione o bot ao canal como administrador
+   - Envie uma mensagem no canal
+   - Acesse: https://api.telegram.org/bot<SEU_TOKEN>/getUpdates
+   - Procure "chat":{"id": ...} — esse é o Chat ID
+
+-------------------------------
+TIPOS DE POST SUPORTADOS:
+-------------------------------
+  🖼️  Imagem    - Envia foto com legenda opcional
+  🎬  Vídeo     - Envia vídeo com legenda opcional
+  ✍️  Texto     - Mensagem de texto simples
+  💬  Reação    - Mensagem de texto / resposta
+  📊  Enquete   - Poll (primeira linha = pergunta, demais = opções)
+
+-------------------------------
+DICAS:
+-------------------------------
+  - Clique em "Validar" após digitar o token para verificar se está correto
+  - Use "Testar conexão" para enviar uma mensagem de teste ao canal
+  - O botão ▶ ao lado de cada horário envia o post na hora (sem esperar)
+  - Os logs ficam visíveis na própria campanha após o primeiro envio
