@@ -1324,10 +1324,10 @@ function openMoveModal(fromDay, overflowPaths){
   document.getElementById('moveModalDesc').textContent=
     `${overflowPaths.length} foto(s) do dia ${fmtDay(fromDay)} não serão usadas. Escolha para qual dia mover:`;
   const sel=document.getElementById('moveDestSel');
-  sel.innerHTML=galleryDays
+  const sorted=[...galleryDays]
     .filter(d=>d.day!==fromDay)
-    .map(d=>`<option value="${d.day}">${fmtDay(d.day)}</option>`)
-    .join('');
+    .sort((a,b)=>a.day.localeCompare(b.day));  // ordena do mais antigo ao mais recente
+  sel.innerHTML=sorted.map(d=>`<option value="${d.day}">${fmtDay(d.day)}</option>`).join('');
   if(!sel.innerHTML) sel.innerHTML='<option disabled>Nenhum outro dia disponível</option>';
   document.getElementById('moveModal').classList.add('open');
 }
