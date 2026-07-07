@@ -1590,7 +1590,8 @@ async function generateDay(fromNow=false){
 
   try{
     // 1. Busca configuração dos slots (com fotos atribuídas, sem copy)
-    const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs`);
+    const fromHour=fromNow?currentHourBRT:0;
+    const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs?from_hour=${fromHour}`);
     if(!cfgRes.ok){showToast('Erro ao carregar configuração','error');btn.disabled=false;prog.style.display='none';return;}
 
     let configs=cfgRes.configs;

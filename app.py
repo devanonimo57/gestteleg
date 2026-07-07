@@ -719,6 +719,8 @@ def get_slot_configs(cid, day):
         "image","poll","image","image",
         "text","image","image","text",
     ]
+    # from_hour: só atribui fotos a slots a partir dessa hora
+    from_hour = int(request.args.get("from_hour", 0))
     sb = get_sb()
     try:
         day_files = sb.storage.from_(BUCKET).list(path=day) or []
@@ -733,7 +735,8 @@ def get_slot_configs(cid, day):
     for hour, stype in enumerate(DAY_TYPES):
         media_path = ""
         media_name = ""
-        if stype in ("image", "video") and photo_idx < len(photos):
+        # Só atribui foto se o slot for >= from_hour
+        if stype in ("image", "video") and hour >= from_hour and photo_idx < len(photos):
             fname      = photos[photo_idx]["name"]
             full_path  = f"{day}/{fname}"
             media_path = sb.storage.from_(BUCKET).get_public_url(full_path)
