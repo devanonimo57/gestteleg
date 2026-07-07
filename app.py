@@ -636,47 +636,52 @@ def _get_emoji_img(name="fire", size=180):
     return img
 
 def _detect_explicit_areas(image_url, xai_key):
-    """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
-    import json as _json
-    prompt = (
-        "Look carefully at this image. Your task: place emoji censors directly on top of nipples/areolas and genitals.\n\n"
-        "For EACH nipple or genital area visible, return: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
-        "- x: fraction of image WIDTH where the NIPPLE is (not the center of the breast — the nipple itself)\n"
-        "- y: fraction of image HEIGHT where the NIPPLE is (nipples are usually near the bottom-front of the breast)\n"
-        "- r: radius to cover just the areola/nipple or genital, as fraction of image WIDTH (usually 0.05–0.10)\n\n"
-        "Critical rules:\n"
-        "- Point to the NIPPLE, not the top or center of the breast. The nipple is at the tip/front of the breast.\n"
-        "- Two visible nipples = two separate objects with precise individual coordinates.\n"
-        "- r should be small enough to cover just the nipple/areola (not the whole breast).\n"
-        "- Return ONLY the JSON array. No text."
-    )
+    """Usa NudeNet para detectar partes explícitas com bounding boxes precisas."""
+    import io, tempfile
+    # Alvo: seios e genitália expostos
+    TARGET_CLASSES = {
+        "FEMALE_BREAST_EXPOSED",
+        "FEMALE_GENITALIA_EXPOSED",
+        "MALE_GENITALIA_EXPOSED",
+        "ANUS_EXPOSED",
+        "FEMALE_NIPPLE_EXPOSED",
+    }
     try:
-        r = requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
-            json={
-                "model": "grok-4.3",
-                "messages": [{"role": "user", "content": [
-                    {"type": "image_url", "image_url": {"url": image_url}},
-                    {"type": "text", "text": prompt},
-                ]}],
-                "max_tokens": 300,
-                "temperature": 0.1,
-            },
-            timeout=40,
-        )
-        data = r.json()
-        if not r.ok:
-            return [], str(data)
-        raw = data["choices"][0]["message"]["content"].strip()
-        print(f"[Censor] Vision raw response: {raw[:300]}")
-        # Extrai JSON mesmo se vier com texto ao redor
-        start = raw.find("[")
-        end   = raw.rfind("]") + 1
-        if start == -1:
-            print(f"[Censor] Nenhum JSON encontrado na resposta")
-            return [], "no json array in response"
-        areas = _json.loads(raw[start:end])
+        from nudenet import NudeDetector
+        detector = NudeDetector()
+
+        # Baixa a imagem
+        img_resp = requests.get(image_url, timeout=20)
+        img_resp.raise_for_status()
+
+        # Salva em arquivo temporário (NudeNet exige path)
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp:
+            tmp.write(img_resp.content)
+            tmp_path = tmp.name
+
+        detections = detector.detect(tmp_path)
+        print(f"[Censor] NudeNet raw: {detections}")
+
+        # Descobre dimensões da imagem
+        from PIL import Image as _PILImage
+        img_pil = _PILImage.open(io.BytesIO(img_resp.content))
+        w, h = img_pil.size
+
+        areas = []
+        for d in detections:
+            if d.get("class") not in TARGET_CLASSES:
+                continue
+            if d.get("score", 0) < 0.3:
+                continue
+            box = d.get("box", [])  # [x, y, width, height] em pixels
+            if len(box) < 4:
+                continue
+            bx, by, bw, bh = box
+            cx = (bx + bw / 2) / w
+            cy = (by + bh / 2) / h
+            r  = max(bw, bh) / 2 / w  # raio como fração da largura
+            areas.append({"x": cx, "y": cy, "r": r})
+
         print(f"[Censor] Áreas detectadas: {areas}")
         return areas, ""
     except Exception as e:
