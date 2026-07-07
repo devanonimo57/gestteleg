@@ -527,20 +527,13 @@ def save_campaign_day(cid, day):
 
 @app.route("/api/campaigns/<cid>/days/<day>", methods=["DELETE"])
 def delete_campaign_day(cid, day):
+    # Remove apenas a configuração da campanha — NÃO apaga arquivos do storage
     campaigns = load_data()
     for c in campaigns:
         if c["id"] == cid:
             c.get("days", {}).pop(day, None)
             save_data(campaigns)
             register_all_jobs()
-            try:
-                sb = get_sb()
-                items = sb.storage.from_(BUCKET).list(path=day) or []
-                files_to_delete = [f"{day}/{f['name']}" for f in items if f.get("name")]
-                if files_to_delete:
-                    sb.storage.from_(BUCKET).remove(files_to_delete)
-            except Exception as e:
-                print(f"[Storage] Erro ao apagar pasta {day}: {e}")
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
