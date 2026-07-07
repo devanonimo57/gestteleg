@@ -50,6 +50,18 @@ def save_data(campaigns):
 
 # ---------- Geração de conteúdo (Grok) ----------
 
+def capitalize_lines(text):
+    """Capitaliza a primeira letra de cada linha, como digitado no celular."""
+    lines = text.split("\n")
+    result = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped:
+            result.append(stripped[0].upper() + stripped[1:])
+        else:
+            result.append("")
+    return "\n".join(result)
+
 def generate_copy(persona, post_type, xai_key, used_texts=None):
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
@@ -167,7 +179,7 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
             return "", f"xAI HTTP {r.status_code}: {err}"
-        return data["choices"][0]["message"]["content"].strip(), ""
+        return capitalize_lines(data["choices"][0]["message"]["content"].strip()), ""
     except Exception as e:
         return "", str(e)
 
@@ -247,7 +259,7 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                             "Foto na praia pelada: 'Tô aqui no rio bem peladinha\\nsentada na pedra, sentindo o sol no corpo\\njá sorrindo e te chamando pra vir comigo 🥰\\nQuer ver tudo sem os foguinhos atrapalhando?\\nVEM VER TUDO NO VIP 👇'\n"
                             "Foto pelada à noite: 'Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\\nestou aqui te esperando pra me fazer companhia\\nvem me ver toda peladinha sem censura no VIP'\n\n"
                             "REGRAS:\n"
-                            "- Descreve literalmente o que tá na foto — onde ela tá, o que tá vestindo (ou não), posição, expressão\n"
+                            "- Descreve literalmente o que tá na foto — onde ela tá, o que tá vestindo (ou não), posição, expressão. ATENÇÃO: seja preciso com cores e detalhes (se a calcinha é preta, diz preta; se é azul, diz azul)\n"
                             "- Linhas curtas com impacto, ritmo de zap\n"
                             "- Primeira pessoa feminina, direta, sem vergonha\n"
                             "- Termina com CTA contextualizado com o cenário/foto, convidando pro VIP\n"
@@ -275,7 +287,7 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                 err = err.get("message") or err.get("error") or str(err)
             print(f"[Vision] Erro {r.status_code}: {err}")
             return "", f"xAI Vision HTTP {r.status_code}: {err}"
-        msg = data["choices"][0]["message"]["content"].strip()
+        msg = capitalize_lines(data["choices"][0]["message"]["content"].strip())
         print(f"[Vision] OK: {msg[:80]}")
         return msg, ""
     except Exception as e:
