@@ -153,23 +153,21 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
         tema = random.choice(temas_texto)
         prompt = (
             f"Escreva uma legenda de canal Telegram adulto sobre: {tema}.\n\n"
-            f"EXEMPLOS do formato de saída OBRIGATÓRIO:\n"
-            f"Exemplo 1:\n"
-            f"COPY: Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\nEstou aqui te esperando pra me fazer companhia\nVem me ver toda peladinha sem censura no VIP\n"
-            f"CTA: 🔥 Ver peladinha no VIP 🔥\n\n"
-            f"Exemplo 2:\n"
-            f"COPY: Tô entediada em casa, sem calcinha, rolando o celular kkkk\nAlguém pra me fazer companhia?\nTem coisa quente me esperando no VIP 🔥\n"
-            f"CTA: 💦 Entrar no VIP agora 🔞\n\n"
+            f"FORMATO DE SAÍDA — siga EXATAMENTE assim, sem desvio:\n"
+            f"COPY: [linha 1 da copy]\n[linha 2]\n[linha 3]\nCTA: [emoji] [texto curto] [emoji]\n\n"
+            f"EXEMPLOS:\n"
+            f"COPY: Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\nEstou aqui te esperando pra me fazer companhia\nVem me ver toda peladinha sem censura no VIP\nCTA: 🔥 Ver peladinha no VIP 🔥\n\n"
+            f"COPY: Tô entediada em casa, sem calcinha, rolando o celular kkkk\nAlguém pra me fazer companhia?\nTem coisa quente me esperando no VIP 🔥\nCTA: 💦 Entrar no VIP agora 🔞\n\n"
             f"REGRAS DA COPY:\n"
-            f"- Linhas curtas, ritmo de zap\n"
+            f"- 3 a 4 linhas curtas, ritmo de zap\n"
             f"- Primeira pessoa feminina, direta, sem vergonha\n"
             f"- NUNCA use 'mano', 'cara' referindo a ela\n"
-            f"- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n"
-            f"- NÃO mencione nome\n\n"
-            f"REGRAS DO CTA:\n"
-            f"- Máximo 25 caracteres\n"
+            f"- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n\n"
+            f"REGRAS DO CTA (OBRIGATÓRIO — última linha, sempre):\n"
+            f"- Começa com 'CTA:'\n"
+            f"- Máximo 25 caracteres após 'CTA:'\n"
             f"- Emoji no início e no final\n"
-            f"- Contextualizado com o tema da copy\n\n"
+            f"- Contextualizado com a copy\n\n"
             f"Persona de referência (tom): {persona[:200]}"
             f"{historico}"
         )
@@ -184,7 +182,7 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
                     {"role": "system", "content": "Você é uma garota brasileira de 20 e poucos anos com canal adulto pago no Telegram. Você escreve suas próprias legendas — na primeira pessoa, como mulher, de forma explícita e direta. Sem rodeios, sem eufemismos. Você descreve o que tá acontecendo com o corpo, o que tá sentindo, o que tá fazendo. Escreva APENAS o texto da legenda, sem aspas, sem introdução."},
                     {"role": "user",   "content": prompt},
                 ],
-                "max_tokens": 200,
+                "max_tokens": 320,
                 "temperature": 0.92,
             },
             timeout=20,
