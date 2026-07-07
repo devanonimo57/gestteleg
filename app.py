@@ -68,41 +68,38 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
 
     temas_texto = [
         # Manhã / acordando
-        "acorda com preguiça e manda uma mensagem safada pro seguidor como se fosse de manhã cedo, ainda na cama",
-        "acabou de acordar, tá com fome mas tá com mais vontade de outra coisa, conta isso de forma direta",
+        "é de manhã cedo, ela acabou de acordar, ainda na cama, com preguiça e com vontade de outra coisa — fala isso de forma direta e curta",
+        "acabou de acordar e já tá pensando em coisa errada, conta isso como se fosse mandar mensagem pra uma amiga",
         # Banho / se arrumando
-        "saiu do banho agora e tá com preguiça de se vestir, fala sobre isso de forma provocante",
-        "tá se arrumando pra sair mas tá pensando em cancelar tudo e ficar em casa fazendo outra coisa",
+        "saiu do banho agora, não tá com vontade de se vestir, conta isso de forma casual",
+        "tá se arrumando pra sair mas tá em dúvida se vai ou fica em casa, e o motivo pra ficar é safado",
         # Tédio / em casa
-        "tá entediada em casa sem fazer nada e com aquela vontade que não passa",
-        "tá deitada no sofá rolando o celular e pensa no seguidor de repente, fala isso de forma direta",
+        "tá entediada em casa, o dia tá vazio e aquela vontade não passa — conta isso sem forçar",
+        "tá deitada no sofá, rolando o celular sem fazer nada, e aí bate aquela vontade do nada",
         # Bastidores / conteúdo
-        "fala de forma animada sobre o conteúdo que vai gravar hoje, sem entregar o que é",
-        "acabou de gravar algo e ficou até ela mesma surpresa com o resultado, provoca o seguidor",
-        # Confissão / segredo
-        "conta um segredo safado que nunca contou pra ninguém, algo que aconteceu com ela",
-        "confessa uma vontade que tá guardando há dias e não aguentou mais",
-        # Desafio / aposta
-        "desafia o seguidor a aguentar ver o que ela vai mostrar sem reagir",
-        "aposta que o seguidor não vai conseguir assistir até o final sem querer mais",
-        # Provocação direta
-        "manda um recado direto, curto e safado pro seguidor como se fosse mensagem de WhatsApp",
-        "faz uma provocação sexual direta, como se estivesse com o seguidor na mesma sala",
+        "foi gravar hoje e aconteceu algo engraçado ou inesperado durante a gravação, conta como se fosse pra uma amiga",
+        "acabou de ver um conteúdo que gravou e ficou surpresa com ela mesma, conta isso sem entregar o que é",
+        # Confissão pessoal
+        "conta uma vontade ou pensamento safado que teve hoje, de forma honesta e curta, sem exagero",
+        "confessa uma coisa que fez ou pensou hoje que não deveria contar mas contou assim mesmo",
+        # Situação do dia
+        "algo simples aconteceu hoje — foi ao mercado, saiu, ficou em casa — mas pensou em algo safado no meio",
+        "teve um dia comum mas uma cena do dia fez ela pensar em coisa errada, conta de forma natural",
+        # Provocação leve
+        "manda um pensamento curto e safado, como se fosse mensagem de zap pra alguém que ela gosta",
+        "faz uma observação sobre como tá se sentindo agora, curta e direta, sem enrolação",
         # Madrugada
-        "é madrugada, não consegue dormir, tá pensando em coisas que não devia, conta isso",
-        "acaba de mandar uma mensagem de madrugada que não deveria ter mandado e não tá arrependida",
-        # Academia / corpo
-        "acabou de sair da academia, tá suada, e descreve isso de forma que parece outra coisa",
-        "fala que malhou hoje e que o corpo tá pedindo uma recompensa",
-        # FOMO / urgência
-        "faz o seguidor sentir que tá perdendo algo que só acontece hoje",
-        "avisa que o acesso ao conteúdo vai sumir em breve e não vai voltar",
-        # Humor leve
-        "zoeira com o seguidor que ainda não entrou, mas de forma carinhosa e chamativa",
-        "faz uma observação irônica e safada sobre o tipo de seguidor que ela tem",
-        # Fim de semana / clima
-        "é fim de semana, tá calor, tá em casa sem roupa e com vontade de companhia",
-        "fala que o calor tá insuportável e que a solução que ela encontrou não é bem o que esperavam",
+        "é tarde da noite ou madrugada, não consegue dormir e tá com a cabeça cheia de coisa errada",
+        "tá acordada de madrugada e mandou uma mensagem que não devia — conta isso sem arrependimento",
+        # Corpo / bem-estar
+        "acabou de malhar ou fazer algo físico e o corpo tá pedindo uma coisa bem diferente de descanso",
+        "tá com preguiça de tudo hoje menos de uma coisa, conta isso de forma direta",
+        # Clima / ambiente
+        "tá calor, tá em casa, tá com pouca roupa — conta isso como quem tá reclamando mas na verdade tá gostando",
+        "o dia tá chuvoso e preguiçoso e ela tá num clima de ficar na cama fazendo outra coisa",
+        # Humor / ironia
+        "faz uma observação irônica e safada sobre algo do dia a dia, tom leve, sem forçar",
+        "conta uma situação boba do dia que virou coisa safada na cabeça dela, com bom humor",
     ]
     temas_enquete = [
         "o que o seguidor quer ver dela hoje",
@@ -129,12 +126,20 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
     else:
         tema = random.choice(temas_texto)
         prompt = (
-            f"Escreva UMA mensagem curta pra canal Telegram adulto. Tema: {tema}.\n"
-            f"Escreva na primeira pessoa, como uma jovem brasileira mandando mensagem no zap — informal, natural, sem parecer marketing.\n"
-            f"Pode usar 'kkkk', 'né', 'tá', 'mano', 'cara', gírias do dia a dia. Máx 2 frases.\n"
-            f"NÃO use: 'sensual', 'provocante', 'sedutora', 'exclusivo', 'único', 'exótico', 'irresistível'.\n"
-            f"NÃO mencione o nome da modelo.\n"
-            f"Persona de referência (tom, não copie literalmente): {persona[:300]}"
+            f"Escreva uma legenda de canal Telegram adulto sobre: {tema}.\n\n"
+            f"ESTRUTURA OBRIGATÓRIA (inspire-se nesses exemplos reais de canal adulto):\n"
+            f"Exemplo 1: 'Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\\nestou aqui te esperando pra me fazer companhia\\nvem me ver toda peladinha sem censura no VIP'\n"
+            f"Exemplo 2: 'tô entediada em casa, sem calcinha, rolando o celular e pensando em coisa errada kkkk\\nalguém pra me fazer companhia?\\ntem coisa quente me esperando no VIP 🔥'\n"
+            f"Exemplo 3: 'gravei hoje e o vídeo ficou absurdo... nem eu acreditei\\nem tudo que fiz kkkk\\nquem quiser ver completo tá no VIP'\n\n"
+            f"REGRAS:\n"
+            f"- Linhas curtas, ritmo de zap, no máximo 2-3 palavras por linha quando criar impacto\n"
+            f"- Primeira pessoa feminina, explícita e direta — descreve o que sente, o que tá fazendo, o que quer\n"
+            f"- Termina com CTA que convida pro VIP/canal pago, contextualizado com o tema\n"
+            f"- Pode usar emojis naturalmente (🔥🥵😜💦 etc)\n"
+            f"- NUNCA use 'mano', 'cara' referindo a ela mesma\n"
+            f"- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n"
+            f"- NÃO mencione nome\n"
+            f"Persona de referência (tom): {persona[:200]}"
             f"{historico}"
         )
 
@@ -145,7 +150,7 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
             json={
                 "model": "grok-4.3",
                 "messages": [
-                    {"role": "system", "content": "Você é uma jovem brasileira que escreve posts pra canal Telegram adulto. Escreva como uma pessoa real mandando mensagem — informal, direto, sem parecer robô. Escreva APENAS o texto do post, sem aspas, sem introdução, sem explicação."},
+                    {"role": "system", "content": "Você é uma garota brasileira de 20 e poucos anos com canal adulto pago no Telegram. Você escreve suas próprias legendas — na primeira pessoa, como mulher, de forma explícita e direta. Sem rodeios, sem eufemismos. Você descreve o que tá acontecendo com o corpo, o que tá sentindo, o que tá fazendo. Escreva APENAS o texto da legenda, sem aspas, sem introdução."},
                     {"role": "user",   "content": prompt},
                 ],
                 "max_tokens": 200,
@@ -229,21 +234,29 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                 "model": "grok-4.3",
                 "messages": [
                     {"role": "system", "content": (
-                        "Você é uma jovem brasileira escrevendo mensagens pro seu canal Telegram adulto. "
-                        "Escreve de forma natural, como conversa de zap — gírias, abreviações, tom casual. "
-                        "NUNCA diga que 'tirou a foto', 'tá mandando a foto', 'acabou de fotografar' ou qualquer variação disso. "
-                        "APENAS o texto final, sem aspas, sem introdução, sem emoji excessivo."
+                        "Você é uma garota brasileira de 20 e poucos anos com canal adulto pago no Telegram. "
+                        "Você escreve suas próprias legendas — na primeira pessoa, como mulher, de forma explícita e direta. "
+                        "Você descreve o que tá acontecendo na cena, o que tá sentindo, o que tá fazendo com o corpo. "
+                        "Sem rodeios. APENAS o texto, sem aspas, sem introdução."
                     )},
                     {"role": "user", "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
                         {"type": "text", "text": (
-                            "Use essa imagem como inspiração pra criar uma mensagem curta pro canal. "
-                            "A mensagem deve ser na primeira pessoa, tom de jovem brasileira descontraída. "
-                            "Pode falar sobre como tá se sentindo, o que tá pensando, fazer uma pergunta pro seguidor, ou criar uma frase que combine com o clima/ambiente da foto. "
-                            "NÃO descreva a foto nem diga que tirou/mandou/postou ela. "
-                            "NÃO use: 'sensual', 'provocante', 'sedutora', 'exótico', 'irresistível'. "
-                            "NÃO mencione nome. "
-                            f"1 a 2 frases. Só o texto.{historico}"
+                            "Olha essa foto e escreve a legenda dela pro canal adulto no Telegram.\n\n"
+                            "ESTRUTURA (inspire-se nesses exemplos reais):\n"
+                            "Foto na praia pelada: 'Tô aqui no rio bem peladinha\\nsentada na pedra, sentindo o sol no corpo\\njá sorrindo e te chamando pra vir comigo 🥰\\nQuer ver tudo sem os foguinhos atrapalhando?\\nVEM VER TUDO NO VIP 👇'\n"
+                            "Foto pelada à noite: 'Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\\nestou aqui te esperando pra me fazer companhia\\nvem me ver toda peladinha sem censura no VIP'\n\n"
+                            "REGRAS:\n"
+                            "- Descreve literalmente o que tá na foto — onde ela tá, o que tá vestindo (ou não), posição, expressão\n"
+                            "- Linhas curtas com impacto, ritmo de zap\n"
+                            "- Primeira pessoa feminina, direta, sem vergonha\n"
+                            "- Termina com CTA contextualizado com o cenário/foto, convidando pro VIP\n"
+                            "- Pode usar emojis (🔥🥵😜💦😈 etc)\n"
+                            "- NÃO diga que tirou/mandou/postou a foto\n"
+                            "- NÃO use 'mano', 'cara' referindo a ela\n"
+                            "- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n"
+                            "- NÃO mencione nome\n"
+                            f"Só o texto da legenda.{historico}"
                         )},
                     ]},
                 ],
