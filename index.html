@@ -1286,19 +1286,17 @@ function todayBRT(){
 function openNewDayModal(){createNextDay();}
 function closeNewDayModal(){document.getElementById('newDayModal').classList.remove('open');}
 async function createNextDay(){
-  // Calcula o próximo dia após o último existente (ou amanhã se não houver nenhum)
+  // Se hoje ainda não existe, cria hoje; senão cria o dia após o último existente
+  const today=todayBRT();
   let nextDay;
-  if(galleryDays.length){
+  if(!galleryDays.length || !galleryDays.find(d=>d.day===today)){
+    nextDay=today;
+  } else {
     const sorted=[...galleryDays].sort((a,b)=>a.day.localeCompare(b.day));
     const last=sorted[sorted.length-1].day;
     const d=new Date(last+'T12:00:00');
     d.setDate(d.getDate()+1);
     nextDay=d.toISOString().slice(0,10);
-  } else {
-    // nenhum dia ainda: usa amanhã em BRT
-    const tomorrow=new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
-    tomorrow.setDate(tomorrow.getDate()+1);
-    nextDay=tomorrow.toISOString().slice(0,10);
   }
   const r=await fetch('/api/media/days',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({day:nextDay})});
   const data=await r.json();
