@@ -1,4 +1,4 @@
-import os, uuid, time, requests, base64, threading
+import os, uuid, time, requests, threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -57,7 +57,14 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
     historico = ""
     if used_texts:
         lista = "\n".join(f"- {t}" for t in used_texts[-10:])
-        historico = f"\n\nTextos já usados (NÃO repita ideias, ganchos ou frases similares):\n{lista}"
+        historico = (
+            f"\n\nMensagens já geradas hoje (PROIBIDO repetir):\n{lista}"
+            f"\n\nRegras anti-repetição OBRIGATÓRIAS:"
+            f"\n- NÃO use o mesmo contexto/situação de nenhuma mensagem acima (ex: se já usou 'saindo do banho', não use banho de novo)"
+            f"\n- NÃO comece com a mesma palavra ou estrutura de nenhuma mensagem acima"
+            f"\n- NÃO use a mesma emoção ou gancho (ex: se já usou tédio, use outra coisa)"
+            f"\n- O tema deve ser completamente diferente das mensagens acima"
+        )
 
     temas_texto = [
         # Manhã / acordando
@@ -205,15 +212,15 @@ def generate_cta_label(msg, stype, xai_key):
 def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
     if not xai_key:
         return "", "Chave Grok/xAI não informada"
-    try:
-        img_resp = requests.get(image_url, timeout=15)
-        img_resp.raise_for_status()
-        content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0]
-        img_b64 = base64.b64encode(img_resp.content).decode("utf-8")
-        img_data_url = f"data:{content_type};base64,{img_b64}"
-    except Exception as e:
-        print(f"[Vision] Erro ao baixar imagem: {e}")
-        return "", f"Erro ao baixar imagem: {e}"
+
+    historico = ""
+    if used_texts:
+        lista = "\n".join(f"- {t}" for t in used_texts[-10:])
+        historico = (
+            f"\n\nMensagens já geradas hoje (PROIBIDO repetir):\n{lista}"
+            f"\nA legenda deve ter contexto completamente diferente de todas as mensagens acima."
+        )
+
     try:
         r = requests.post(
             "https://api.x.ai/v1/chat/completions",
@@ -223,14 +230,14 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                 "messages": [
                     {"role": "system", "content": "Você é uma jovem brasileira que escreve legendas pra canal Telegram adulto. Escreva como uma pessoa real — informal, direto, sem parecer robô ou marketing. APENAS o texto, sem aspas, sem introdução."},
                     {"role": "user", "content": [
-                        {"type": "image_url", "image_url": {"url": img_data_url}},
+                        {"type": "image_url", "image_url": {"url": image_url}},
                         {"type": "text", "text": (
                             "Olha essa foto e escreve uma legenda curta pra canal Telegram adulto. "
                             "Fala na primeira pessoa sobre o que tá acontecendo na imagem, como se você fosse a pessoa da foto mandando mensagem no zap. "
                             "Tom de jovem brasileira, informal, natural — pode usar 'kkkk', 'né', 'tá', gírias do dia a dia. "
                             "NÃO use: 'sensual', 'provocante', 'sedutora', 'exótico', 'irresistível'. "
                             "NÃO mencione o nome da pessoa. "
-                            "Máximo 2 frases. Só o texto, sem explicação."
+                            f"Máximo 2 frases. Só o texto, sem explicação.{historico}"
                         )},
                     ]},
                 ],
