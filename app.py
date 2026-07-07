@@ -142,11 +142,21 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
     if post_type == "poll":
         tema = random.choice(temas_enquete)
         prompt = (
-            f"Crie uma enquete pra canal Telegram adulto sobre: {tema}.\n"
-            f"Primeira linha = a pergunta (curta, direta, como uma jovem brasileira falaria no zap).\n"
-            f"Próximas 3-4 linhas = opções de resposta (curtas, safadas, naturais).\n"
-            f"Escreve como uma pessoa real, não como marketing. Sem palavras como 'sensual', 'provocante', 'único', 'exótico'.\n"
-            f"Persona de referência (tom, não copie literalmente): {persona[:300]}"
+            f"Crie uma enquete pra canal Telegram adulto sobre: {tema}.\n\n"
+            f"FORMATO:\n"
+            f"Linha 1 = pergunta (curta, direta, como uma jovem brasileira falaria no zap, com emoji no fim)\n"
+            f"Próximas 3-4 linhas = opções de resposta, cada uma começando com um emoji condizente com a opção\n\n"
+            f"EXEMPLO:\n"
+            f"O que você quer ver de mim hoje? 👀\n"
+            f"🔥 Foto pelada no espelho\n"
+            f"💦 Vídeo no banho\n"
+            f"😈 Conteúdo mais explícito\n"
+            f"🌸 Algo mais suave\n\n"
+            f"REGRAS:\n"
+            f"- Emojis nas opções são OBRIGATÓRIOS\n"
+            f"- Escreve como pessoa real, não como marketing\n"
+            f"- Sem palavras como 'sensual', 'provocante', 'único', 'exótico'\n"
+            f"Persona de referência (tom): {persona[:200]}"
             f"{historico}"
         )
     else:
