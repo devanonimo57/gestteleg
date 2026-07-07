@@ -254,21 +254,21 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                     {"role": "user", "content": [
                         {"type": "image_url", "image_url": {"url": image_url}},
                         {"type": "text", "text": (
-                            "Olha essa foto e escreve a legenda dela pro canal adulto no Telegram.\n\n"
-                            "ESTRUTURA (inspire-se nesses exemplos reais):\n"
-                            "Foto na praia pelada: 'Tô aqui no rio bem peladinha\\nsentada na pedra, sentindo o sol no corpo\\njá sorrindo e te chamando pra vir comigo 🥰\\nQuer ver tudo sem os foguinhos atrapalhando?\\nVEM VER TUDO NO VIP 👇'\n"
-                            "Foto pelada à noite: 'Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\\nestou aqui te esperando pra me fazer companhia\\nvem me ver toda peladinha sem censura no VIP'\n\n"
-                            "REGRAS:\n"
-                            "- Descreve literalmente o que tá na foto — onde ela tá, o que tá vestindo (ou não), posição, expressão. ATENÇÃO: seja preciso com cores e detalhes (se a calcinha é preta, diz preta; se é azul, diz azul)\n"
-                            "- Linhas curtas com impacto, ritmo de zap\n"
-                            "- Primeira pessoa feminina, direta, sem vergonha\n"
-                            "- Termina com CTA contextualizado com o cenário/foto, convidando pro VIP\n"
-                            "- Pode usar emojis (🔥🥵😜💦😈 etc)\n"
-                            "- NÃO diga que tirou/mandou/postou a foto\n"
-                            "- NÃO use 'mano', 'cara' referindo a ela\n"
-                            "- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n"
+                            "Olha essa foto e escreve a legenda pro canal adulto no Telegram.\n\n"
+                            "EXEMPLOS DO ESTILO CERTO:\n"
+                            "Foto no rio pelada: 'Tô aqui no rio bem peladinha\\nsentindo o sol no corpo e pensando em você\\nQuer ver tudo sem os foguinhos atrapalhando?\\nVEM VER TUDO NO VIP 👇'\n"
+                            "Foto pelada à noite: 'Língua de fora pra te provocar 😜🔥\\nTô te esperando pra me fazer companhia\\nVem me ver sem censura no VIP'\n\n"
+                            "COMO ESCREVER:\n"
+                            "- Use NO MÁXIMO 1 detalhe visual da foto pra criar contexto (ex: 'no rio', 'à noite', 'só de calcinha')\n"
+                            "- O resto da copy é sobre o que ela SENTE, QUER ou está PENSANDO — não descreva cada item da foto\n"
+                            "- Linhas curtas, ritmo de zap, primeira pessoa feminina\n"
+                            "- Termina com CTA contextual convidando pro VIP (ex: 'VEM VER TUDO NO VIP', 'VEM PRO VIP AGORA')\n"
+                            "- Emojis naturais (🔥🥵😜💦😈)\n"
+                            "- NÃO liste roupas, acessórios ou posições — isso vira inventário, não copy\n"
+                            "- NÃO diga que tirou/mandou a foto\n"
+                            "- NÃO use 'mano', 'cara'\n"
                             "- NÃO mencione nome\n"
-                            f"Só o texto da legenda.{historico}"
+                            f"Só o texto.{historico}"
                         )},
                     ]},
                 ],
