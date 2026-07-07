@@ -639,14 +639,18 @@ def _detect_explicit_areas(image_url, xai_key):
     """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
     import json as _json
     prompt = (
-        "This is an adult content image. Find ALL explicit body parts that must be censored with emojis.\n\n"
-        "For each area return: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
-        "- x, y: CENTER of the body part as fraction of image (0.0=top-left, 1.0=bottom-right)\n"
-        "- r: use 0.13 for each breast/nipple, 0.10 for genitals/pubic area\n\n"
-        "IMPORTANT: For two breasts, return TWO separate objects — one per breast.\n"
-        "Be precise about the CENTER of each breast, not just the nipple.\n\n"
-        "Example (topless frontal photo): [{\"x\":0.38,\"y\":0.42,\"r\":0.13},{\"x\":0.62,\"y\":0.42,\"r\":0.13}]\n\n"
-        "Return ONLY the JSON array. Nothing else."
+        "Look carefully at this image. Identify ALL explicit body parts visible that must be censored: "
+        "breasts/nipples, genitals, pubic area.\n\n"
+        "For EACH area to censor, return a JSON object: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
+        "- x: horizontal center of the body part, as fraction of image WIDTH (0.0=left edge, 1.0=right edge)\n"
+        "- y: vertical center of the body part, as fraction of image HEIGHT (0.0=top edge, 1.0=bottom edge)\n"
+        "- r: radius of the area to cover, as fraction of image WIDTH. Measure the actual size of the body part in the image.\n\n"
+        "Rules:\n"
+        "- Two breasts = two separate objects. Place each exactly where you see it in the image.\n"
+        "- If the person is not facing forward (side view, back view, lying down, angled), adjust x and y accordingly.\n"
+        "- r should reflect the ACTUAL size visible: a close-up breast might be r=0.20, a small/distant one r=0.08.\n"
+        "- If a body part is partially covered by clothing, still censor the visible portion.\n"
+        "- Return ONLY the JSON array. No text, no explanation."
     )
     try:
         r = requests.post(
@@ -683,16 +687,18 @@ def _detect_explicit_areas(image_url, xai_key):
 
 def _apply_emojis(image_bytes, areas, img_emoji):
     """Sobrepõe emojis nas áreas indicadas e retorna bytes JPEG."""
-    from PIL import Image
+    from PIL import Image, ImageOps
     import io
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    img = Image.open(io.BytesIO(image_bytes))
+    img = ImageOps.exif_transpose(img)  # corrige rotação EXIF de fotos de iPhone
+    img = img.convert("RGBA")
     w, h = img.size
     for area in areas:
         x_frac = float(area.get("x", 0.5))
         y_frac = float(area.get("y", 0.5))
         r_frac = float(area.get("r", 0.1))
         # Tamanho generoso: 3x o raio detectado, mínimo 160px
-        size = max(160, int(r_frac * w * 3.5))
+        size = max(70, int(r_frac * w * 1.8))
         emoji = img_emoji.resize((size, size), Image.LANCZOS)
         cx = int(x_frac * w) - size // 2
         cy = int(y_frac * h) - size // 2
@@ -726,7 +732,7 @@ def censor_day_photos(day):
             # Sorteia 1 emoji aleatório por foto
             import random as _random
             emoji_name = _random.choice(list(EMOJI_FILES.keys()))
-            emoji_img  = _get_emoji_img(emoji_name, 180)
+            emoji_img  = _get_emoji_img(emoji_name, 300)
 
             # 1. Detecta áreas explícitas
             areas, err = _detect_explicit_areas(public_url, xai_key)
