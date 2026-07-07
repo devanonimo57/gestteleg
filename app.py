@@ -681,7 +681,7 @@ def _detect_explicit_areas(image_url, xai_key):
             cy = (by + bh / 2) / h
             # Aréola ≈ 28% do bbox do seio; genitália usa bbox menor → não reduz tanto
             breast_classes = {"FEMALE_BREAST_EXPOSED", "FEMALE_NIPPLE_EXPOSED"}
-            factor = 0.28 if d.get("class") in breast_classes else 0.45
+            factor = 0.33 if d.get("class") in breast_classes else 0.45
             r = min(bw, bh) * factor / w
             areas.append({"x": cx, "y": cy, "r": r})
 
