@@ -614,6 +614,133 @@ def delete_storage_day(day):
         return jsonify({"error": str(e)}), 500
     return jsonify({"ok": True, "day": day})
 
+# Emojis pré-baixados em cache (evita download repetido)
+_EMOJI_CACHE = {}
+
+def _get_emoji_img(size=120):
+    """Retorna imagem PIL do emoji 🔥 (Twemoji PNG)."""
+    from PIL import Image
+    import io
+    key = size
+    if key not in _EMOJI_CACHE:
+        url = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/72x72/1f525.png"
+        r = requests.get(url, timeout=10)
+        img = Image.open(io.BytesIO(r.content)).convert("RGBA").resize((size, size), Image.LANCZOS)
+        _EMOJI_CACHE[key] = img
+    return _EMOJI_CACHE[key]
+
+def _detect_explicit_areas(image_url, xai_key):
+    """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
+    import json as _json
+    prompt = (
+        "Look at this image carefully. Identify any explicit body parts that need censoring "
+        "(bare breasts, nipples, genitals, buttocks if fully exposed).\n\n"
+        "Return ONLY a valid JSON array. Each item: {\"x\": 0.5, \"y\": 0.3, \"r\": 0.12} "
+        "where x = horizontal center (0=left, 1=right), y = vertical center (0=top, 1=bottom), "
+        "r = radius as fraction of image width.\n\n"
+        "If nothing explicit: return []\n"
+        "Return ONLY the JSON array, no explanation."
+    )
+    try:
+        r = requests.post(
+            "https://api.x.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
+            json={
+                "model": "grok-4.3",
+                "messages": [{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                    {"type": "text", "text": prompt},
+                ]}],
+                "max_tokens": 300,
+                "temperature": 0.1,
+            },
+            timeout=40,
+        )
+        data = r.json()
+        if not r.ok:
+            return [], str(data)
+        raw = data["choices"][0]["message"]["content"].strip()
+        # Extrai JSON mesmo se vier com texto ao redor
+        start = raw.find("[")
+        end   = raw.rfind("]") + 1
+        if start == -1:
+            return [], "no json"
+        areas = _json.loads(raw[start:end])
+        return areas, ""
+    except Exception as e:
+        return [], str(e)
+
+def _apply_emojis(image_bytes, areas, img_emoji):
+    """Sobrepõe emojis nas áreas indicadas e retorna bytes JPEG."""
+    from PIL import Image
+    import io
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    w, h = img.size
+    for area in areas:
+        x_frac = float(area.get("x", 0.5))
+        y_frac = float(area.get("y", 0.5))
+        r_frac = float(area.get("r", 0.1))
+        size   = max(60, int(r_frac * w * 2.2))  # diâmetro com margem
+        emoji  = img_emoji.resize((size, size), Image.LANCZOS)
+        cx = int(x_frac * w) - size // 2
+        cy = int(y_frac * h) - size // 2
+        img.paste(emoji, (cx, cy), emoji)
+    out = img.convert("RGB")
+    buf = io.BytesIO()
+    out.save(buf, format="JPEG", quality=90)
+    return buf.getvalue()
+
+@app.route("/api/media/days/<path:day>/censor", methods=["POST"])
+def censor_day_photos(day):
+    xai_key = (request.json or {}).get("xai_key", "")
+    if not xai_key:
+        return jsonify({"error": "Chave xAI não informada"}), 400
+    sb = get_sb()
+    try:
+        day_files = sb.storage.from_(BUCKET).list(path=day) or []
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    photos = [f for f in day_files if f.get("name") and not f["name"].startswith(".")]
+    results = []
+    try:
+        emoji_img = _get_emoji_img(120)
+    except Exception as e:
+        return jsonify({"error": f"Erro ao carregar emoji: {e}"}), 500
+
+    for f in photos:
+        fname     = f["name"]
+        full_path = f"{day}/{fname}"
+        public_url = sb.storage.from_(BUCKET).get_public_url(full_path)
+        try:
+            # 1. Detecta áreas explícitas
+            areas, err = _detect_explicit_areas(public_url, xai_key)
+            if err:
+                results.append({"file": fname, "ok": False, "error": err})
+                continue
+            if not areas:
+                results.append({"file": fname, "ok": True, "censored": False, "msg": "nenhuma área detectada"})
+                continue
+            # 2. Baixa imagem original
+            img_resp = requests.get(public_url, timeout=20)
+            img_resp.raise_for_status()
+            # 3. Aplica emojis
+            censored_bytes = _apply_emojis(img_resp.content, areas, emoji_img)
+            # 4. Sobe imagem censurada substituindo o arquivo original
+            sb.storage.from_(BUCKET).remove([full_path])
+            sb.storage.from_(BUCKET).upload(
+                path=full_path,
+                file=censored_bytes,
+                file_options={"content-type": "image/jpeg", "upsert": "true"},
+            )
+            results.append({"file": fname, "ok": True, "censored": True, "areas": len(areas)})
+        except Exception as e:
+            results.append({"file": fname, "ok": False, "error": str(e)})
+
+    total    = len(results)
+    censored = sum(1 for r in results if r.get("censored"))
+    return jsonify({"ok": True, "total": total, "censored": censored, "results": results})
+
 @app.route("/api/media", methods=["GET"])
 def list_media():
     campaign_id = request.args.get("campaign_id", "")

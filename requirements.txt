@@ -3,3 +3,4 @@ apscheduler>=3.10
 requests>=2.31
 supabase>=2.0
 gunicorn>=21.2
+Pillow>=10.0
