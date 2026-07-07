@@ -585,6 +585,19 @@ def create_storage_day():
         pass
     return jsonify({"ok": True, "day": day})
 
+@app.route("/api/media/days/<path:day>", methods=["DELETE"])
+def delete_storage_day(day):
+    sb = get_sb()
+    try:
+        items = sb.storage.from_(BUCKET).list(path=day) or []
+        paths = [f"{day}/{f['name']}" for f in items if f.get("name")]
+        if paths:
+            sb.storage.from_(BUCKET).remove(paths)
+    except Exception as e:
+        print(f"[Gallery] delete day error: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"ok": True, "day": day})
+
 @app.route("/api/media", methods=["GET"])
 def list_media():
     campaign_id = request.args.get("campaign_id", "")

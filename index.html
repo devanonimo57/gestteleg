@@ -1082,6 +1082,10 @@ function renderDayFolders(){
             Adicionar fotos
             <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToDay(event,'${day.day}')"/>
           </label>
+          <button onclick="event.stopPropagation();deleteDayFolder('${day.day}')" title="Excluir pasta" style="background:none;border:1px solid rgba(239,68,68,.4);border-radius:8px;color:rgba(239,68,68,.8);padding:5px 9px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;transition:background .15s" onmouseover="this.style.background='rgba(239,68,68,.15)'" onmouseout="this.style.background='none'">
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Excluir
+          </button>
           <svg class="day-chevron ico" id="chev-${di}" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
@@ -1118,6 +1122,14 @@ function galItemHTML(f,selectable,dayPrefix){
     <div class="gal-corner">${isVid?'🎬':'🖼'}</div>
     ${del}
   </div>`;
+}
+
+async function deleteDayFolder(day){
+  if(!confirm(`Excluir a pasta "${day}" e todas as ${day} fotos? Isso não pode ser desfeito.`)) return;
+  showToast(`Excluindo pasta ${day}…`,'info');
+  const r=await fetch(`/api/media/days/${encodeURIComponent(day)}`,{method:'DELETE'});
+  if(r.ok){showToast('Pasta excluída!','success');await loadMedia();}
+  else{const d=await r.json();showToast('Erro: '+(d.error||'falha'),'error');}
 }
 
 async function uploadToDay(e,day){
