@@ -839,6 +839,31 @@ def delete_media(name):
     get_sb().storage.from_(BUCKET).remove([name])
     return jsonify({"ok": True})
 
+@app.route("/api/media/move", methods=["POST"])
+def move_media_files():
+    """Move arquivos de um dia para outro."""
+    data     = request.json or {}
+    files    = data.get("files", [])    # lista de paths completos ex: ["2026-07-07/abc.jpg"]
+    dest_day = data.get("dest_day", "")
+    if not files or not dest_day:
+        return jsonify({"error": "files e dest_day são obrigatórios"}), 400
+    sb = get_sb()
+    moved, errors = [], []
+    for src_path in files:
+        fname     = src_path.split("/")[-1]
+        dest_path = f"{dest_day}/{fname}"
+        try:
+            file_bytes = sb.storage.from_(BUCKET).download(src_path)
+            # Detecta content-type pela extensão
+            ct = "video/mp4" if fname.lower().endswith(".mp4") else "image/jpeg"
+            sb.storage.from_(BUCKET).upload(dest_path, file_bytes,
+                file_options={"content-type": ct, "upsert": "true"})
+            sb.storage.from_(BUCKET).remove([src_path])
+            moved.append(fname)
+        except Exception as e:
+            errors.append({"file": fname, "error": str(e)})
+    return jsonify({"ok": True, "moved": len(moved), "errors": errors})
+
 # ---------- IA ----------
 
 @app.route("/api/validate-token", methods=["POST"])
