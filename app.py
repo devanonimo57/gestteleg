@@ -614,33 +614,39 @@ def delete_storage_day(day):
         return jsonify({"error": str(e)}), 500
     return jsonify({"ok": True, "day": day})
 
-# Emojis pré-baixados em cache (evita download repetido)
+# Cache de emoji PIL
 _EMOJI_CACHE = {}
 
-def _get_emoji_img(size=120):
-    """Retorna imagem PIL do emoji 🔥 (Twemoji PNG)."""
+EMOJI_FILES = {
+    "fire":   "static/emojis/fire.png",
+    "devil":  "static/emojis/devil.png",
+    "18":     "static/emojis/18.png",
+    "drool":  "static/emojis/drool.png",
+    "flower": "static/emojis/flower.png",
+}
+
+def _get_emoji_img(name="fire", size=180):
     from PIL import Image
-    import io
-    key = size
-    if key not in _EMOJI_CACHE:
-        url = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14/assets/72x72/1f525.png"
-        r = requests.get(url, timeout=10)
-        img = Image.open(io.BytesIO(r.content)).convert("RGBA").resize((size, size), Image.LANCZOS)
-        _EMOJI_CACHE[key] = img
-    return _EMOJI_CACHE[key]
+    key = (name, size)
+    if key in _EMOJI_CACHE:
+        return _EMOJI_CACHE[key]
+    path = EMOJI_FILES.get(name, EMOJI_FILES["fire"])
+    img = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+    _EMOJI_CACHE[key] = img
+    return img
 
 def _detect_explicit_areas(image_url, xai_key):
     """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
     import json as _json
     prompt = (
-        "This is an adult content image that needs emoji censoring before publishing. "
-        "Your job is to find coordinates of ALL exposed body parts: breasts/nipples, genitals, buttocks.\n\n"
-        "Return ONLY a JSON array. Each object: {\"x\": 0.5, \"y\": 0.3, \"r\": 0.12}\n"
-        "- x: horizontal center (0.0=left edge, 1.0=right edge)\n"
-        "- y: vertical center (0.0=top, 1.0=bottom)\n"
-        "- r: radius as fraction of image WIDTH (use 0.08 to 0.15 for breasts, 0.06 to 0.10 for nipples)\n\n"
-        "Example for a topless photo: [{\"x\":0.42,\"y\":0.38,\"r\":0.12},{\"x\":0.58,\"y\":0.38,\"r\":0.12}]\n\n"
-        "Return ONLY the JSON array. No text, no explanation."
+        "This is an adult content image. Find ALL explicit body parts that must be censored with emojis.\n\n"
+        "For each area return: {\"x\": cx, \"y\": cy, \"r\": radius}\n"
+        "- x, y: CENTER of the body part as fraction of image (0.0=top-left, 1.0=bottom-right)\n"
+        "- r: use 0.13 for each breast/nipple, 0.10 for genitals/pubic area\n\n"
+        "IMPORTANT: For two breasts, return TWO separate objects — one per breast.\n"
+        "Be precise about the CENTER of each breast, not just the nipple.\n\n"
+        "Example (topless frontal photo): [{\"x\":0.38,\"y\":0.42,\"r\":0.13},{\"x\":0.62,\"y\":0.42,\"r\":0.13}]\n\n"
+        "Return ONLY the JSON array. Nothing else."
     )
     try:
         r = requests.post(
@@ -685,10 +691,14 @@ def _apply_emojis(image_bytes, areas, img_emoji):
         x_frac = float(area.get("x", 0.5))
         y_frac = float(area.get("y", 0.5))
         r_frac = float(area.get("r", 0.1))
-        size   = max(60, int(r_frac * w * 2.2))  # diâmetro com margem
-        emoji  = img_emoji.resize((size, size), Image.LANCZOS)
+        # Tamanho generoso: 3x o raio detectado, mínimo 160px
+        size = max(160, int(r_frac * w * 3.5))
+        emoji = img_emoji.resize((size, size), Image.LANCZOS)
         cx = int(x_frac * w) - size // 2
         cy = int(y_frac * h) - size // 2
+        # Garante que não sai fora da imagem
+        cx = max(0, min(cx, w - size))
+        cy = max(0, min(cy, h - size))
         img.paste(emoji, (cx, cy), emoji)
     out = img.convert("RGB")
     buf = io.BytesIO()
@@ -708,16 +718,16 @@ def censor_day_photos(day):
 
     photos = [f for f in day_files if f.get("name") and not f["name"].startswith(".")]
     results = []
-    try:
-        emoji_img = _get_emoji_img(120)
-    except Exception as e:
-        return jsonify({"error": f"Erro ao carregar emoji: {e}"}), 500
-
     for f in photos:
         fname     = f["name"]
         full_path = f"{day}/{fname}"
         public_url = sb.storage.from_(BUCKET).get_public_url(full_path)
         try:
+            # Sorteia 1 emoji aleatório por foto
+            import random as _random
+            emoji_name = _random.choice(list(EMOJI_FILES.keys()))
+            emoji_img  = _get_emoji_img(emoji_name, 180)
+
             # 1. Detecta áreas explícitas
             areas, err = _detect_explicit_areas(public_url, xai_key)
             if err:

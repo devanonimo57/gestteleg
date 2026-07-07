@@ -1083,7 +1083,7 @@ function renderDayFolders(){
             <input type="file" accept="image/*,video/*" multiple style="display:none" onchange="uploadToDay(event,'${day.day}')"/>
           </label>
           <button onclick="event.stopPropagation();censorDay('${day.day}',this)" title="Adicionar emojis nas partes explícitas" style="background:none;border:1px solid rgba(251,191,36,.4);border-radius:8px;color:rgba(251,191,36,.9);padding:5px 9px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;transition:background .15s" onmouseover="this.style.background='rgba(251,191,36,.12)'" onmouseout="this.style.background='none'">
-            🔥 Censurar fotos
+            Censurar fotos
           </button>
           <button onclick="event.stopPropagation();deleteDayFolder('${day.day}')" title="Excluir pasta" style="background:none;border:1px solid rgba(239,68,68,.4);border-radius:8px;color:rgba(239,68,68,.8);padding:5px 9px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;transition:background .15s" onmouseover="this.style.background='rgba(239,68,68,.15)'" onmouseout="this.style.background='none'">
             <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -1130,7 +1130,7 @@ function galItemHTML(f,selectable,dayPrefix){
 async function censorDay(day, btn){
   const xai=localStorage.getItem('global_xai')||'';
   if(!xai){showToast('Informe a chave xAI nas configurações','error');return;}
-  if(!confirm(`Adicionar emojis 🔥 nas partes explícitas de todas as fotos de "${day}"?\nAs fotos originais serão substituídas.`)) return;
+  if(!confirm(`Censurar todas as fotos de "${day}" com emojis aleatórios?\nAs fotos originais serão substituídas.`)) return;
   const orig=btn.textContent;
   btn.disabled=true;
   btn.textContent='⏳ Processando...';
