@@ -597,15 +597,27 @@ def list_media():
         if c:
             campaign_days_filter = set(c.get("days", {}).keys())
             for day, day_data in c.get("days", {}).items():
-                used = [s.get("media_path","") for s in day_data.get("slots",[]) if s.get("media_path")]
-                posted_by_day[day] = set(used)
+                used = set()
+                for s in day_data.get("slots", []):
+                    mp = s.get("media_path", "")
+                    if not mp:
+                        continue
+                    # media_path pode ser URL completa ou só o path; normalizamos pra path relativo
+                    if "/object/public/" in mp:
+                        mp = mp.split(f"/{BUCKET}/", 1)[-1]
+                    used.add(mp)
+                posted_by_day[day] = used
     total_bytes = 0
     days_result = []
-    root_items  = real_sb.storage.from_(BUCKET).list() or []
+    try:
+        root_items = real_sb.storage.from_(BUCKET).list() or []
+    except Exception as e:
+        print(f"[Gallery] list root error: {e}")
+        root_items = []
     day_folders = [item.get("name") for item in root_items if item.get("metadata") is None and item.get("name")]
     for day in sorted(day_folders, reverse=True):
-        if campaign_days_filter is not None and day not in campaign_days_filter:
-            continue
+        # Nunca filtra pastas — mostra tudo do storage
+        # "posted_set" é calculado com base na campanha selecionada (se houver)
         posted_set = posted_by_day.get(day, set())
         try:
             day_items = real_sb.storage.from_(BUCKET).list(path=day) or []
