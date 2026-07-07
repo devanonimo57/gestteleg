@@ -821,10 +821,15 @@ svg.ico{display:block;flex-shrink:0}
           <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Adicionar horário
         </button>
-        <button class="sched-ai-btn" id="genDayBtn" onclick="openGenDayModal()">
-          <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          Gerar dia completo com IA
-        </button>
+        <div style="display:flex;gap:8px;flex:1">
+          <button class="sched-ai-btn" id="genDayBtn" onclick="openGenDayModal()" style="flex:1">
+            <svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Gerar dia completo com IA
+          </button>
+          <button id="cancelGenBtn" onclick="cancelGenDay()" style="display:none;align-items:center;justify-content:center;gap:6px;background:color-mix(in oklab,var(--destructive) 15%,transparent);border:1px solid color-mix(in oklab,var(--destructive) 30%,transparent);border-radius:12px;padding:10px 14px;font-size:12px;font-weight:700;color:var(--destructive);cursor:pointer;transition:all .15s;white-space:nowrap">
+            ✕ Parar
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1524,6 +1529,13 @@ function closeGenDayModal(){
   document.getElementById('genDayChoiceModal').classList.remove('open');
 }
 
+let _genCancelled=false;
+function cancelGenDay(){
+  _genCancelled=true;
+  document.getElementById('cancelGenBtn').textContent='⏳ Cancelando…';
+  document.getElementById('cancelGenBtn').disabled=true;
+}
+
 async function generateDay(fromNow=false){
   if(!selectedDay){showToast('Selecione um dia primeiro','error');return;}
   if(!editingId){showToast('Salve a campanha primeiro','error');return;}
@@ -1543,11 +1555,14 @@ async function generateDay(fromNow=false){
   }
 
   const btn=document.getElementById('genDayBtn');
+  const cancelBtn=document.getElementById('cancelGenBtn');
   const prog=document.getElementById('genProgress');
   const bar=document.getElementById('genBar');
   btn.disabled=true;
+  cancelBtn.style.display='flex';
   prog.style.display='block';
   bar.style.width='0%';
+  _genCancelled=false;
 
   if(fromNow){
     // Mantém slots passados, remove apenas os futuros
@@ -1574,6 +1589,7 @@ async function generateDay(fromNow=false){
 
     // 2. Gera copy para cada slot individualmente — aparece em tempo real
     for(let i=0;i<configs.length;i++){
+      if(_genCancelled) break;
       const cfg=configs[i];
       btn.textContent=`⏳ ${i+1} / ${total}`;
       bar.style.width=Math.round((i+1)/total*100)+'%';
@@ -1600,19 +1616,25 @@ async function generateDay(fromNow=false){
       renderSchedules();
     }
 
-    // 3. Salva tudo no servidor
+    // 3. Salva o que foi gerado (mesmo se cancelado parcialmente)
     await api('PUT',`/campaigns/${editingId}/days/${selectedDay}`,{
       slots:schedules,
       cta_label:campaignDays[selectedDay]?.cta_label||''
     });
     buildDayNav();
-    showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+    if(_genCancelled){
+      showToast(`⛔ Geração cancelada — ${schedules.length} horário(s) salvos`,'error');
+    } else {
+      showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+    }
 
   }catch(e){
     showToast('Erro de conexão','error');
   }
 
   btn.disabled=false;
+  cancelBtn.style.display='none';
+  _genCancelled=false;
   btn.innerHTML='<svg viewBox="0 0 24 24" class="ico" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Gerar dia completo com IA';
   setTimeout(()=>{prog.style.display='none';bar.style.width='0%';},900);
 }
