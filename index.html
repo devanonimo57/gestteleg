@@ -1727,12 +1727,13 @@ async function generateDay(fromNow=false){
   const persona=document.getElementById('fPersona').value.trim();
   // Hora atual em BRT
   const currentHourBRT=parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour:'2-digit',hour12:false}));
+  const nextHourBRT=currentHourBRT+1;
   const futureSlotsCount=fromNow
-    ? schedules.filter(s=>parseInt(s.time)>=currentHourBRT).length
+    ? schedules.filter(s=>parseInt(s.time)>=nextHourBRT).length
     : schedules.length;
   if(futureSlotsCount>0){
     const msg=fromNow
-      ? `Isso vai substituir ${futureSlotsCount} horário(s) a partir das ${currentHourBRT}h do dia ${selectedDay}. Continuar?`
+      ? `Isso vai substituir ${futureSlotsCount} horário(s) a partir das ${nextHourBRT}h do dia ${selectedDay}. Continuar?`
       : `Isso vai substituir os ${schedules.length} horários do dia ${selectedDay}. Continuar?`;
     if(!confirm(msg)) return;
   }
@@ -1749,7 +1750,7 @@ async function generateDay(fromNow=false){
 
   if(fromNow){
     // Mantém slots passados, remove apenas os futuros
-    schedules=schedules.filter(s=>parseInt(s.time)<currentHourBRT);
+    schedules=schedules.filter(s=>parseInt(s.time)<nextHourBRT);
     campaignDays[selectedDay]={slots:[...schedules]};
   } else {
     // Limpa tudo
@@ -1760,13 +1761,13 @@ async function generateDay(fromNow=false){
 
   try{
     // 1. Busca configuração dos slots (com fotos atribuídas, sem copy)
-    const fromHour=fromNow?currentHourBRT:0;
+    const fromHour=fromNow?nextHourBRT:0;
     const cfgRes=await api('GET',`/campaigns/${editingId}/days/${selectedDay}/slot-configs?from_hour=${fromHour}`);
     if(!cfgRes.ok){showToast('Erro ao carregar configuração','error');btn.disabled=false;prog.style.display='none';return;}
 
     let configs=cfgRes.configs;
-    if(fromNow && currentHourBRT>=0){
-      configs=configs.filter(c=>c.hour>=currentHourBRT);
+    if(fromNow && nextHourBRT>=0){
+      configs=configs.filter(c=>c.hour>=nextHourBRT);
       if(!configs.length){showToast('Nenhum horário futuro para gerar','error');btn.disabled=false;prog.style.display='none';return;}
     }
     const total=configs.length;
