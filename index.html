@@ -1143,8 +1143,15 @@ async function censorDay(day, btn){
     });
     const d=await r.json();
     if(d.ok){
-      showToast(`✅ ${d.censored} de ${d.total} foto(s) censurada(s)!`,'success');
-      await loadMedia();
+      if(d.censored>0){
+        showToast(`✅ ${d.censored} de ${d.total} foto(s) censurada(s)!`,'success');
+        await loadMedia();
+      } else {
+        // Mostra detalhes de por que não censurou
+        const detail=d.results?.map(x=>`${x.file}: ${x.msg||x.error||'sem áreas'}`).join('\n')||'';
+        showToast(`⚠️ Nenhuma área detectada nas ${d.total} foto(s).\n${detail}`,'error');
+        console.log('[Censor] results:', d.results);
+      }
     } else {
       showToast('Erro: '+(d.error||'falha'),'error');
     }

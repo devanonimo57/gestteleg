@@ -633,13 +633,14 @@ def _detect_explicit_areas(image_url, xai_key):
     """Usa Vision API pra detectar partes explícitas e retornar coordenadas (0.0–1.0)."""
     import json as _json
     prompt = (
-        "Look at this image carefully. Identify any explicit body parts that need censoring "
-        "(bare breasts, nipples, genitals, buttocks if fully exposed).\n\n"
-        "Return ONLY a valid JSON array. Each item: {\"x\": 0.5, \"y\": 0.3, \"r\": 0.12} "
-        "where x = horizontal center (0=left, 1=right), y = vertical center (0=top, 1=bottom), "
-        "r = radius as fraction of image width.\n\n"
-        "If nothing explicit: return []\n"
-        "Return ONLY the JSON array, no explanation."
+        "This is an adult content image that needs emoji censoring before publishing. "
+        "Your job is to find coordinates of ALL exposed body parts: breasts/nipples, genitals, buttocks.\n\n"
+        "Return ONLY a JSON array. Each object: {\"x\": 0.5, \"y\": 0.3, \"r\": 0.12}\n"
+        "- x: horizontal center (0.0=left edge, 1.0=right edge)\n"
+        "- y: vertical center (0.0=top, 1.0=bottom)\n"
+        "- r: radius as fraction of image WIDTH (use 0.08 to 0.15 for breasts, 0.06 to 0.10 for nipples)\n\n"
+        "Example for a topless photo: [{\"x\":0.42,\"y\":0.38,\"r\":0.12},{\"x\":0.58,\"y\":0.38,\"r\":0.12}]\n\n"
+        "Return ONLY the JSON array. No text, no explanation."
     )
     try:
         r = requests.post(
@@ -660,14 +661,18 @@ def _detect_explicit_areas(image_url, xai_key):
         if not r.ok:
             return [], str(data)
         raw = data["choices"][0]["message"]["content"].strip()
+        print(f"[Censor] Vision raw response: {raw[:300]}")
         # Extrai JSON mesmo se vier com texto ao redor
         start = raw.find("[")
         end   = raw.rfind("]") + 1
         if start == -1:
-            return [], "no json"
+            print(f"[Censor] Nenhum JSON encontrado na resposta")
+            return [], "no json array in response"
         areas = _json.loads(raw[start:end])
+        print(f"[Censor] Áreas detectadas: {areas}")
         return areas, ""
     except Exception as e:
+        print(f"[Censor] Exceção: {e}")
         return [], str(e)
 
 def _apply_emojis(image_bytes, areas, img_emoji):
