@@ -50,6 +50,20 @@ def save_data(campaigns):
 
 # ---------- Geração de conteúdo (Grok) ----------
 
+def _split_copy_cta(raw):
+    """Separa COPY e CTA do retorno da IA no formato 'COPY: ...\nCTA: ...'"""
+    msg_lines = []
+    cta = ""
+    for line in raw.split("\n"):
+        stripped = line.strip()
+        if stripped.upper().startswith("CTA:"):
+            cta = stripped[4:].strip().strip('"\'')[:35]
+        elif stripped.upper().startswith("COPY:"):
+            msg_lines.append(stripped[5:].strip())
+        else:
+            msg_lines.append(stripped)
+    return "\n".join(l for l in msg_lines if l), cta
+
 def capitalize_lines(text):
     """Capitaliza a primeira letra de cada linha, como digitado no celular."""
     lines = text.split("\n")
@@ -139,18 +153,23 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
         tema = random.choice(temas_texto)
         prompt = (
             f"Escreva uma legenda de canal Telegram adulto sobre: {tema}.\n\n"
-            f"ESTRUTURA OBRIGATÓRIA (inspire-se nesses exemplos reais de canal adulto):\n"
-            f"Exemplo 1: 'Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\\nestou aqui te esperando pra me fazer companhia\\nvem me ver toda peladinha sem censura no VIP'\n"
-            f"Exemplo 2: 'tô entediada em casa, sem calcinha, rolando o celular e pensando em coisa errada kkkk\\nalguém pra me fazer companhia?\\ntem coisa quente me esperando no VIP 🔥'\n"
-            f"Exemplo 3: 'gravei hoje e o vídeo ficou absurdo... nem eu acreditei\\nem tudo que fiz kkkk\\nquem quiser ver completo tá no VIP'\n\n"
-            f"REGRAS:\n"
-            f"- Linhas curtas, ritmo de zap, no máximo 2-3 palavras por linha quando criar impacto\n"
-            f"- Primeira pessoa feminina, explícita e direta — descreve o que sente, o que tá fazendo, o que quer\n"
-            f"- Termina com CTA que convida pro VIP/canal pago, contextualizado com o tema\n"
-            f"- Pode usar emojis naturalmente (🔥🥵😜💦 etc)\n"
-            f"- NUNCA use 'mano', 'cara' referindo a ela mesma\n"
+            f"EXEMPLOS do formato de saída OBRIGATÓRIO:\n"
+            f"Exemplo 1:\n"
+            f"COPY: Tô peladinha na cadeira... língua de fora pra te provocar 😜🔥\nEstou aqui te esperando pra me fazer companhia\nVem me ver toda peladinha sem censura no VIP\n"
+            f"CTA: 🔥 Ver peladinha no VIP 🔥\n\n"
+            f"Exemplo 2:\n"
+            f"COPY: Tô entediada em casa, sem calcinha, rolando o celular kkkk\nAlguém pra me fazer companhia?\nTem coisa quente me esperando no VIP 🔥\n"
+            f"CTA: 💦 Entrar no VIP agora 🔞\n\n"
+            f"REGRAS DA COPY:\n"
+            f"- Linhas curtas, ritmo de zap\n"
+            f"- Primeira pessoa feminina, direta, sem vergonha\n"
+            f"- NUNCA use 'mano', 'cara' referindo a ela\n"
             f"- NÃO use: 'sensual', 'provocante', 'sedutora', 'irresistível'\n"
-            f"- NÃO mencione nome\n"
+            f"- NÃO mencione nome\n\n"
+            f"REGRAS DO CTA:\n"
+            f"- Máximo 25 caracteres\n"
+            f"- Emoji no início e no final\n"
+            f"- Contextualizado com o tema da copy\n\n"
             f"Persona de referência (tom): {persona[:200]}"
             f"{historico}"
         )
@@ -178,52 +197,19 @@ def generate_copy(persona, post_type, xai_key, used_texts=None):
             err = data.get("error", data)
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
-            return "", f"xAI HTTP {r.status_code}: {err}"
-        return capitalize_lines(data["choices"][0]["message"]["content"].strip()), ""
+            return "", "", f"xAI HTTP {r.status_code}: {err}"
+        raw = data["choices"][0]["message"]["content"].strip()
+        msg, cta = _split_copy_cta(raw)
+        return capitalize_lines(msg), cta, ""
     except Exception as e:
-        return "", str(e)
+        return "", "", str(e)
 
 
 def generate_cta_label(msg, stype, xai_key):
-    """Gera texto curto, explícito e contextualizado para o botão CTA."""
-    if not xai_key or not msg or stype == "poll":
-        return ""
-    try:
-        prompt = (
-            f"Post de canal adulto no Telegram: \"{msg[:200]}\"\n\n"
-            f"Escreva o texto de um botão CTA para esse post. Regras:\n"
-            f"- Máximo 22 caracteres\n"
-            f"- Explícito, safado, direto\n"
-            f"- Contextualizado com o que está no post\n"
-            f"- OBRIGATÓRIO: emoji no início E no final\n"
-            f"- Exemplos: '🍆 Ver completo 🍆', '🔞 Quero mais 🔥', '💦 Assiste aqui 👅', '😈 Entra no grupo 🔞'\n"
-            f"Responda SOMENTE com o texto do botão, sem aspas, sem explicação."
-        )
-        r = requests.post(
-            "https://api.x.ai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {xai_key}", "Content-Type": "application/json"},
-            json={
-                "model": "grok-4.3",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 15,
-                "temperature": 0.9,
-            },
-            timeout=15,
-        )
-        data = r.json()
-        if r.ok:
-            label = data["choices"][0]["message"]["content"].strip().strip('"\'')[:30]
-            # Garante emoji no início e no final
-            import unicodedata
-            def is_emoji(ch):
-                return unicodedata.category(ch) in ('So', 'Sm') or ord(ch) > 0x1F300
-            if label and not is_emoji(label[-1]):
-                first_emoji = next((c for c in label if is_emoji(c)), '🔞')
-                label = f"{label} {first_emoji}"
-            return label
-        return ""
-    except Exception:
-        return ""
+    """CTA extraído da própria copy — sem chamada extra de IA."""
+    # Chamada separada eliminada; o CTA agora vem embutido no retorno de generate_copy/generate_copy_vision
+    # Esta função fica como fallback vazio para não quebrar chamadas legadas
+    return ""
 
 
 def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
@@ -267,8 +253,11 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
                             "- NÃO liste roupas, acessórios ou posições — isso vira inventário, não copy\n"
                             "- NÃO diga que tirou/mandou a foto\n"
                             "- NÃO use 'mano', 'cara'\n"
-                            "- NÃO mencione nome\n"
-                            f"Só o texto.{historico}"
+                            "- NÃO mencione nome\n\n"
+                            "FORMATO DE SAÍDA OBRIGATÓRIO (duas partes separadas):\n"
+                            "COPY: [legenda aqui]\n"
+                            "CTA: [texto do botão — máx 25 chars, emoji no início e fim, contextualizado com a foto]\n\n"
+                            f"Exemplos de CTA: '🔥 Ver sem censura no VIP 🔥', '💦 Vem ver tudo no VIP 🔞', '😈 Clica e vem ver 🔥'{historico}"
                         )},
                     ]},
                 ],
@@ -286,13 +275,15 @@ def generate_copy_vision(persona, image_url, xai_key, used_texts=None):
             if isinstance(err, dict):
                 err = err.get("message") or err.get("error") or str(err)
             print(f"[Vision] Erro {r.status_code}: {err}")
-            return "", f"xAI Vision HTTP {r.status_code}: {err}"
-        msg = capitalize_lines(data["choices"][0]["message"]["content"].strip())
+            return "", "", f"xAI Vision HTTP {r.status_code}: {err}"
+        raw = data["choices"][0]["message"]["content"].strip()
+        msg, cta = _split_copy_cta(raw)
+        msg = capitalize_lines(msg)
         print(f"[Vision] OK: {msg[:80]}")
-        return msg, ""
+        return msg, cta, ""
     except Exception as e:
         print(f"[Vision] Exception: {e}")
-        return "", str(e)
+        return "", "", str(e)
 
 # ---------- Telegram ----------
 
@@ -763,14 +754,14 @@ def api_generate_slot_copy():
         return jsonify({"ok": False, "error": "Chave Grok não informada"})
     vision_err = ""
     msg = ""
+    cta_label = ""
     if stype in ("image", "video") and media_path:
-        msg, vision_err = generate_copy_vision(persona, media_path, xai_key, used_texts=used_texts)
+        msg, cta_label, vision_err = generate_copy_vision(persona, media_path, xai_key, used_texts=used_texts)
         if not msg:
             print(f"[Vision] Falhou ({vision_err}), usando fallback texto")
-            msg, _ = generate_copy(persona, stype, xai_key, used_texts=used_texts)
+            msg, cta_label, _ = generate_copy(persona, stype, xai_key, used_texts=used_texts)
     else:
-        msg, vision_err = generate_copy(persona, stype, xai_key, used_texts=used_texts)
-    cta_label = generate_cta_label(msg, stype, xai_key) if msg else ""
+        msg, cta_label, vision_err = generate_copy(persona, stype, xai_key, used_texts=used_texts)
     return jsonify({"ok": bool(msg), "msg": msg, "cta_label": cta_label, "vision_err": vision_err})
 
 @app.route("/api/generate-copy", methods=["POST"])
@@ -831,10 +822,9 @@ def api_generate_day():
             return cfg, "", ""
         stype = cfg["type"]
         if stype in ("image", "video") and cfg["media_path"]:
-            msg, _ = generate_copy_vision(persona, cfg["media_path"], xai_key)
+            msg, cta, _ = generate_copy_vision(persona, cfg["media_path"], xai_key)
         else:
-            msg, _ = generate_copy(persona, stype, xai_key)
-        cta = generate_cta_label(msg, stype, xai_key) if msg else ""
+            msg, cta, _ = generate_copy(persona, stype, xai_key)
         return cfg, msg, cta
 
     results = {}
