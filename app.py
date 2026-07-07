@@ -887,11 +887,11 @@ def validate_token():
 def get_slot_configs(cid, day):
     DAY_TYPES = [
         "image","text","image","poll",
-        "image","image","text","image",
-        "image","poll","image","text",
-        "image","image","text","image",
-        "image","poll","image","image",
-        "text","image","image","text",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
     ]
     # from_hour: só atribui fotos a slots a partir dessa hora
     from_hour = int(request.args.get("from_hour", 0))
@@ -966,11 +966,11 @@ def api_generate_day():
     day     = body.get("day", datetime.now().strftime("%Y-%m-%d"))
     DAY_TYPES = [
         "image","text","image","poll",
-        "image","image","text","image",
-        "image","poll","image","text",
-        "image","image","text","image",
-        "image","poll","image","image",
-        "text","image","image","text",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
+        "image","text","image","poll",
     ]
     sb = get_sb()
     try:
