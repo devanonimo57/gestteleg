@@ -1807,10 +1807,16 @@ async function generateDay(fromNow=false){
       cta_label:campaignDays[selectedDay]?.cta_label||''
     });
     buildDayNav();
+    // Auto-salva ao terminar (ou ao cancelar com slots já gerados)
+    if(schedules.length > 0){
+      showToast('💾 Salvando automaticamente…','info');
+      await saveCamp();
+    }
+
     if(_genCancelled){
       showToast(`⛔ Geração cancelada — ${schedules.length} horário(s) salvos`,'error');
     } else {
-      showToast(`✅ ${schedules.length} horários criados para ${selectedDay}!`,'success');
+      showToast(`✅ ${schedules.length} horários criados e salvos para ${selectedDay}!`,'success');
     }
 
   }catch(e){
