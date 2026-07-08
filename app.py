@@ -652,6 +652,8 @@ def _detect_explicit_areas(image_url, xai_key):
     }
     try:
         from nudenet import NudeDetector
+        import gc, os as _os
+
         detector = NudeDetector()
 
         # Baixa a imagem
@@ -665,6 +667,14 @@ def _detect_explicit_areas(image_url, xai_key):
 
         detections = detector.detect(tmp_path)
         print(f"[Censor] NudeNet raw: {detections}")
+
+        # Libera o modelo da memória imediatamente após uso
+        try:
+            _os.unlink(tmp_path)
+        except Exception:
+            pass
+        del detector
+        gc.collect()
 
         # Descobre dimensões da imagem
         from PIL import Image as _PILImage
